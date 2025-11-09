@@ -1,4 +1,4 @@
-type SquareIndex = u64;
+type SquareIndex = usize;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Square(pub SquareIndex);
@@ -8,8 +8,35 @@ impl Square {
         Self(rank.as_index() << 3 + file.as_index())
     }
 
+    /// Returns the square with the given name in algebraic notation, or None
+    /// if the name is invalid
+    pub fn from_name(name: &str) -> Option<Self> {
+        if name.len() != 2 {
+            return None;
+        }
+        let mut chars = name.chars();
+
+        Some(Self::at(
+            BoardFile::from_char(chars.next().unwrap())?,
+            BoardRank::from_char(chars.next().unwrap())?,
+        ))
+    }
+
+    pub fn file(&self) -> BoardFile {
+        BoardFile(self.as_index() & 7)
+    }
+
+    pub fn rank(&self) -> BoardRank {
+        BoardRank(self.as_index() >> 3)
+    }
+
     pub fn as_index(&self) -> SquareIndex {
         self.0
+    }
+
+    /// Returns the name of this square in algebraic notation
+    pub fn name(&mut self) -> [char; 2] {
+        return [self.file().as_char(), self.rank().as_char()];
     }
 }
 
@@ -17,8 +44,22 @@ impl Square {
 pub struct BoardFile(pub SquareIndex);
 
 impl BoardFile {
+    pub fn from_char(c: char) -> Option<Self> {
+        let index = c as i64 - 'a' as i64;
+        if (0..8).contains(&index) {
+            Some(Self(index as usize))
+        } else {
+            None
+        }
+    }
+
     pub fn as_index(&self) -> SquareIndex {
         self.0
+    }
+
+    pub fn as_char(&self) -> char {
+        const FILES: [char; 8] = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+        FILES[self.as_index()]
     }
 }
 
@@ -26,8 +67,22 @@ impl BoardFile {
 pub struct BoardRank(pub SquareIndex);
 
 impl BoardRank {
+    pub fn from_char(c: char) -> Option<Self> {
+        let index = c as i64 - '1' as i64;
+        if (0..8).contains(&index) {
+            Some(Self(index as usize))
+        } else {
+            None
+        }
+    }
+
     pub fn as_index(&self) -> SquareIndex {
         self.0
+    }
+
+    pub fn as_char(&self) -> char {
+        const RANKS: [char; 8] = ['1', '2', '3', '4', '5', '6', '7', '8'];
+        RANKS[self.as_index()]
     }
 }
 
