@@ -34,6 +34,7 @@ version = "0.1.0"
 name = "bot-uci"
 version = "0.1.0"
 dependencies = [
+ "chess-lib",
  "derive-getters",
  "strum",
  "strum_macros",

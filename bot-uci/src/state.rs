@@ -1,11 +1,33 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::{OnceLock, RwLock, RwLockReadGuard, RwLockWriteGuard};
-use strum_macros::{AsRefStr, EnumIter, EnumString};
+use strum::IntoEnumIterator;
+use strum_macros::{AsRefStr, EnumIter};
+use vampirc_uci::UciOptionConfig;
 
-#[derive(Debug, EnumIter, AsRefStr, EnumString, Eq, PartialEq, Hash, Copy, Clone)]
-#[strum(serialize_all = "snake_case", ascii_case_insensitive)]
+#[derive(Debug, EnumIter, AsRefStr, Eq, PartialEq, Hash, Copy, Clone)]
 pub enum UciOptions {
-    Example
+    Example,
+}
+
+impl UciOptions {
+    pub fn get_type(&self) -> UciOptionConfig {
+        match self {
+            UciOptions::Example => UciOptionConfig::Button {
+                name: "Example".to_string(),
+            }
+        }
+    }
+    
+    pub fn from_string<S: AsRef<str>>(s: S) -> Option<UciOptions> {
+        let lower = s.as_ref().to_ascii_lowercase();
+        
+        for option in UciOptions::iter() {
+            if option.get_type().get_name() == lower {
+                return Some(option);
+            }
+        }
+        None
+    }
 }
 
 #[derive(Debug)]
@@ -48,14 +70,18 @@ impl GlobalState {
         self.options.remove(&option);
     }
 
-    pub fn set_option_named<S1: AsRef<str>, S2: AsRef<str>>(&mut self, option: S1, value: S2) -> Result<UciOptions, ()> {
-        let o = option.as_ref().parse::<UciOptions>().map_err(|_| ())?;
+    pub fn set_option_named<S1: AsRef<str>, S2: AsRef<str>>(
+        &mut self,
+        option: S1,
+        value: S2,
+    ) -> Result<UciOptions, ()> {
+        let o = UciOptions::from_string(option).ok_or(())?;
         self.set_option(o, value);
         Ok(o)
     }
 
     pub fn unset_option_named<S: AsRef<str>>(&mut self, option: S) -> Result<UciOptions, ()> {
-        let o = option.as_ref().parse::<UciOptions>().map_err(|_| ())?;
+        let o = UciOptions::from_string(option).ok_or(())?;
         self.unset_option(o);
         Ok(o)
     }
@@ -68,9 +94,15 @@ impl GlobalState {
 static SLOW_GLOBAL_STATE: OnceLock<RwLock<GlobalState>> = OnceLock::new();
 
 pub fn slow_global_state() -> RwLockReadGuard<'static, GlobalState> {
-    SLOW_GLOBAL_STATE.get_or_init(|| RwLock::new(GlobalState::new())).read().unwrap()
+    SLOW_GLOBAL_STATE
+        .get_or_init(|| RwLock::new(GlobalState::new()))
+        .read()
+        .unwrap()
 }
 
 pub fn slow_global_state_mut() -> RwLockWriteGuard<'static, GlobalState> {
-    SLOW_GLOBAL_STATE.get_or_init(|| RwLock::new(GlobalState::new())).write().unwrap()
+    SLOW_GLOBAL_STATE
+        .get_or_init(|| RwLock::new(GlobalState::new()))
+        .write()
+        .unwrap()
 }
