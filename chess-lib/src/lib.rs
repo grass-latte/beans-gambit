@@ -1,2 +1,4 @@
 pub mod board;
-pub mod common;
+pub mod moves;
+pub mod piece;
+pub mod square;

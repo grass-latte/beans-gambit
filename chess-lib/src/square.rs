@@ -1,7 +1,35 @@
 type SquareIndex = u64;
 
 #[derive(Clone, Copy, Debug)]
-pub struct Square(SquareIndex);
+pub struct Square(pub SquareIndex);
+
+impl Square {
+    pub fn at(file: BoardFile, rank: BoardRank) -> Self {
+        Self(rank.as_index() << 3 + file.as_index())
+    }
+
+    pub fn as_index(&self) -> SquareIndex {
+        self.0
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct BoardFile(pub SquareIndex);
+
+impl BoardFile {
+    pub fn as_index(&self) -> SquareIndex {
+        self.0
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct BoardRank(pub SquareIndex);
+
+impl BoardRank {
+    pub fn as_index(&self) -> SquareIndex {
+        self.0
+    }
+}
 
 pub const A1: Square = Square(0);
 pub const B1: Square = Square(1);
