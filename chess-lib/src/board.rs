@@ -37,11 +37,16 @@ impl Board {
     }
 
     pub fn make_null_move(&mut self) {
-        todo!();
+        self.color_to_move = !self.color_to_move;
+        self.unmake_stack.push(UnmakeInfo::NullMove);
     }
 
     pub fn unmake_last_move(&mut self) {
         todo!();
+    }
+
+    pub fn color_to_move(&mut self) -> Color {
+        self.color_to_move
     }
 
     pub fn pieces(&self) -> &PieceStorage {
@@ -74,4 +79,15 @@ pub struct InvalidMove;
 
 /// Information necessary to unmake the last move
 #[derive(Clone, Copy, Debug)]
-struct UnmakeInfo {}
+enum UnmakeInfo {
+    Move {
+        /// original piece kind, in case of promotion
+        piece: Piece,
+        source: Square,
+        destination: Square,
+        captured: Option<Piece>,
+        old_castling_rights: CastlingRights,
+        old_en_passant_destination: Option<Square>,
+    },
+    NullMove,
+}

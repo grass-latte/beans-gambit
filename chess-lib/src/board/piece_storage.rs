@@ -23,7 +23,7 @@ impl PieceStorage {
         self.square_contents[sq.as_index()] = piece;
 
         // update old piece bitboard
-        if let Some((old_piece, old_color)) = self.get_piece_at(sq) {
+        if let Some((old_piece, old_color)) = self.get(sq) {
             self.piece_bitboards[get_piece_color_index(old_piece, old_color)].unset(sq);
         }
 
