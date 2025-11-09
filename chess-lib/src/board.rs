@@ -1,4 +1,9 @@
-use crate::{color::Color, piece::Piece, square::Square};
+pub mod color;
+pub mod moves;
+pub mod piece;
+pub mod square;
+
+use self::{color::Color, piece::Piece, square::Square};
 
 #[derive(Clone, Debug)]
 pub struct Board {

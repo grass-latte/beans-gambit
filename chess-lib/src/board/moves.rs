@@ -1,5 +1,5 @@
-use crate::piece::Piece;
-use crate::square::Square;
+use crate::board::piece::Piece;
+use crate::board::square::Square;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Move {
