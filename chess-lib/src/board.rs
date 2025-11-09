@@ -19,10 +19,6 @@ pub struct Board {
     piece_bitboards: [Bitboard; 12],
     /// Mailbox representation of chess board
     square_contents: [Option<(Piece, Color)>; 64],
-    /// Positions of white pieces, for faster iteration
-    white_piece_positions: Vec<Square>,
-    /// Positions of black pieces, for faster iteration
-    black_piece_positions: Vec<Square>,
 }
 
 impl Default for Board {
@@ -34,26 +30,25 @@ impl Default for Board {
 impl Board {
     pub fn new() -> Board {
         Self {
-            white_piece_positions: vec![],
-            black_piece_positions: vec![],
             square_contents: [None; 64],
             piece_bitboards: [Bitboard::EMPTY; 12],
         }
     }
 
-    pub fn get_piece_at(sq: Square) -> Option<(Piece, Color)> {
+    pub fn get_piece_at(&self, sq: Square) -> Option<(Piece, Color)> {
+        self.square_contents[sq.as_index() as usize]
+    }
+
+    pub fn set_piece_at(&mut self, sq: Square) -> Option<(Piece, Color)> {
+        let old = self.get_piece_at(sq);
         todo!()
     }
 
-    pub fn set_piece_at(sq: Square) -> Option<(Piece, Color)> {
+    pub fn make_move(&mut self, mv: Move) -> Result<(), InvalidMove> {
         todo!()
     }
 
-    pub fn make_move(mv: Move) -> Result<(), InvalidMove> {
-        todo!()
-    }
-
-    pub fn unmake_last_move() {
+    pub fn unmake_last_move(&mut self) {
         todo!();
     }
 }
