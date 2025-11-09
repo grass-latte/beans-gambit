@@ -1,12 +1,12 @@
 pub mod state;
 
-use crate::state::{slow_global_state, slow_global_state_mut, UciOptions};
+use crate::state::{UciOptions, slow_global_state, slow_global_state_mut};
 use std::borrow::Borrow;
 use std::io::BufRead;
 use std::time::Duration;
 use std::{io, thread};
 use strum::IntoEnumIterator;
-use vampirc_uci::{parse_one, UciInfoAttribute, UciMessage};
+use vampirc_uci::{UciInfoAttribute, UciMessage, parse_one};
 
 fn send_uci<M: Borrow<UciMessage>>(msg: M) {
     println!("{}", msg.borrow());

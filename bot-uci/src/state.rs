@@ -14,13 +14,13 @@ impl UciOptions {
         match self {
             UciOptions::Example => UciOptionConfig::Button {
                 name: "Example".to_string(),
-            }
+            },
         }
     }
-    
+
     pub fn from_string<S: AsRef<str>>(s: S) -> Option<UciOptions> {
         let lower = s.as_ref().to_ascii_lowercase();
-        
+
         for option in UciOptions::iter() {
             if option.get_type().get_name() == lower {
                 return Some(option);
