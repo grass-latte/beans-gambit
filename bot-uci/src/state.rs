@@ -21,12 +21,7 @@ impl UciOptions {
     pub fn from_string<S: AsRef<str>>(s: S) -> Option<UciOptions> {
         let lower = s.as_ref().to_ascii_lowercase();
 
-        for option in UciOptions::iter() {
-            if option.get_type().get_name() == lower {
-                return Some(option);
-            }
-        }
-        None
+        UciOptions::iter().find(|&option| option.get_type().get_name() == lower)
     }
 }
 
@@ -36,6 +31,12 @@ pub struct GlobalState {
     command_counter: usize,
     commands_in_progress: HashSet<usize>,
     options: HashMap<UciOptions, String>,
+}
+
+impl Default for GlobalState {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl GlobalState {

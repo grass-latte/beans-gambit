@@ -12,6 +12,12 @@ pub struct Board {
     square_contents: [Option<(Piece, Color)>; 64],
 }
 
+impl Default for Board {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Board {
     pub fn new() -> Board {
         Self {

@@ -34,9 +34,9 @@ impl Square {
 
     /// Returns the name of this square in algebraic notation
     pub fn name(&self) -> String {
-        return [self.file().as_char(), self.rank().as_char()]
+        [self.file().as_char(), self.rank().as_char()]
             .iter()
-            .collect();
+            .collect()
     }
 }
 
