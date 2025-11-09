@@ -1,3 +1,6 @@
+#![allow(dead_code)]
+#![allow(unused)]
+
 pub mod state;
 
 use crate::state::{UciOptions, slow_global_state, slow_global_state_mut};

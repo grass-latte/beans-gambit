@@ -71,6 +71,7 @@ impl GlobalState {
         self.options.remove(&option);
     }
 
+    #[allow(clippy::result_unit_err)]
     pub fn set_option_named<S1: AsRef<str>, S2: AsRef<str>>(
         &mut self,
         option: S1,
@@ -81,6 +82,7 @@ impl GlobalState {
         Ok(o)
     }
 
+    #[allow(clippy::result_unit_err)]
     pub fn unset_option_named<S: AsRef<str>>(&mut self, option: S) -> Result<UciOptions, ()> {
         let o = UciOptions::from_string(option).ok_or(())?;
         self.unset_option(o);
