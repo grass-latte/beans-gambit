@@ -17,7 +17,7 @@ pub struct InvalidMove;
 pub struct Board {
     /// Occupancy bitboards for each piece type (0..6 for white, 6..12 for black)
     piece_bitboards: [Bitboard; 12],
-    /// Mailbox representation of chess board
+    /// Mailbox representation of the chess board
     square_contents: [Option<(Piece, Color)>; 64],
 }
 

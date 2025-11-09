@@ -68,13 +68,13 @@ pub enum Square {
 }
 
 impl Square {
-    pub fn get(index: usize) -> Self {
-        debug_assert!(index < 64);
-        unsafe { std::mem::transmute(index) }
+    pub fn at(file: BoardFile, rank: BoardRank) -> Self {
+        Self::from_index(file.as_index() | (rank.as_index() << 3))
     }
 
-    pub fn at(file: BoardFile, rank: BoardRank) -> Self {
-        Self::get(file.as_index() | (rank.as_index() << 3))
+    pub fn from_index(index: usize) -> Self {
+        debug_assert!(index < 64);
+        unsafe { std::mem::transmute(index) }
     }
 
     /// Returns the square with the given name in algebraic notation, or None
@@ -90,11 +90,11 @@ impl Square {
     }
 
     pub fn file(&self) -> BoardFile {
-        BoardFile::get(self.as_index() & 7)
+        BoardFile::from_index(self.as_index() & 7)
     }
 
     pub fn rank(&self) -> BoardRank {
-        BoardRank::get(self.as_index() >> 3)
+        BoardRank::from_index(self.as_index() >> 3)
     }
 
     pub fn as_index(&self) -> usize {
@@ -123,7 +123,7 @@ pub enum BoardFile {
 }
 
 impl BoardFile {
-    pub fn get(index: usize) -> Self {
+    pub fn from_index(index: usize) -> Self {
         debug_assert!(index < 8);
         unsafe { std::mem::transmute(index) }
     }
@@ -131,7 +131,7 @@ impl BoardFile {
     pub fn from_char(c: char) -> Option<Self> {
         let index = c as i64 - 'a' as i64;
         if (0..8).contains(&index) {
-            Some(Self::get(index as usize))
+            Some(Self::from_index(index as usize))
         } else {
             None
         }
@@ -161,7 +161,7 @@ pub enum BoardRank {
 }
 
 impl BoardRank {
-    pub fn get(index: usize) -> Self {
+    pub fn from_index(index: usize) -> Self {
         // ! SAFETY: `BoardRank` has `repr(usize)` and `index` is <8, so this is valid
         debug_assert!(index < 8);
         unsafe { std::mem::transmute(index) }
@@ -170,7 +170,7 @@ impl BoardRank {
     pub fn from_char(c: char) -> Option<Self> {
         let index = c as i64 - '1' as i64;
         if (0..8).contains(&index) {
-            Some(Self::get(index as usize))
+            Some(Self::from_index(index as usize))
         } else {
             None
         }
