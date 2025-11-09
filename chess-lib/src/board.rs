@@ -2,63 +2,38 @@ pub mod bitboard;
 pub mod color;
 pub mod moves;
 pub mod piece;
+pub mod piece_storage;
 pub mod square;
 
 use bitboard::Bitboard;
 use moves::Move;
 
-use self::{color::Color, piece::Piece, square::Square};
+use self::{color::Color, piece::Piece, piece_storage::PieceStorage, square::Square};
 
 #[derive(Clone, Debug)]
 pub struct Board {
-    piece_bitboards: [Bitboard; 12],
-    square_contents: [Option<(Piece, Color)>; 64],
+    pieces: PieceStorage,
     color_to_move: Color,
     en_passant_destination: Option<Square>,
     white_castling_rights: CastlingRights,
     black_castling_rights: CastlingRights,
-}
-
-impl Default for Board {
-    fn default() -> Self {
-        Self::new()
-    }
+    unmake_stack: Vec<UnmakeInfo>,
 }
 
 impl Board {
     pub fn new() -> Board {
         Self {
-            square_contents: [None; 64],
-            piece_bitboards: [Bitboard::EMPTY; 12],
+            pieces: PieceStorage::new(),
             color_to_move: Color::White,
             en_passant_destination: None,
             white_castling_rights: Default::default(),
             black_castling_rights: Default::default(),
-        }
-    }
-
-    pub fn get_piece_at(&self, sq: Square) -> Option<(Piece, Color)> {
-        self.square_contents[sq.as_index()]
-    }
-
-    pub fn set_piece_at(&mut self, sq: Square, piece: Option<(Piece, Color)>) {
-        // update mailbox
-        self.square_contents[sq.as_index()] = piece;
-
-        // update old piece bitboard
-        let old = self.get_piece_at(sq);
-        if let Some((old_piece, old_color)) = old {
-            self.piece_bitboards[get_piece_color_index(old_piece, old_color)].unset(sq);
-        }
-
-        // update new piece bitboard
-        if let Some((new_piece, new_color)) = piece {
-            self.piece_bitboards[get_piece_color_index(new_piece, new_color)].set(sq);
+            unmake_stack: Vec::new(),
         }
     }
 
     pub fn make_move(&mut self, mv: Move) -> Result<(), InvalidMove> {
-        todo!()
+        todo!();
     }
 
     pub fn make_null_move(&mut self) {
@@ -67,6 +42,14 @@ impl Board {
 
     pub fn unmake_last_move(&mut self) {
         todo!();
+    }
+
+    pub fn pieces(&self) -> &PieceStorage {
+        &self.pieces
+    }
+
+    pub fn pieces_mut(&mut self) -> &mut PieceStorage {
+        &mut self.pieces
     }
 }
 
@@ -89,7 +72,6 @@ impl Default for CastlingRights {
 #[error("invalid move")]
 pub struct InvalidMove;
 
-/// Given a piece-color combination, return a unique index for this combination in 0..12
-fn get_piece_color_index(piece: Piece, color: Color) -> usize {
-    (piece as usize) + (color as usize) * 6
-}
+/// Information necessary to unmake the last move
+#[derive(Clone, Copy, Debug)]
+struct UnmakeInfo {}
