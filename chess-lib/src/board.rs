@@ -36,7 +36,7 @@ impl Board {
     }
 
     pub fn get_piece_at(&self, sq: Square) -> Option<(Piece, Color)> {
-        self.square_contents[sq.as_index() as usize]
+        self.square_contents[sq.as_index()]
     }
 
     pub fn set_piece_at(&mut self, sq: Square) -> Option<(Piece, Color)> {
