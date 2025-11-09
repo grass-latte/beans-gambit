@@ -11,10 +11,12 @@ use self::{color::Color, piece::Piece, square::Square};
 
 #[derive(Clone, Debug)]
 pub struct Board {
-    /// Occupancy bitboards for each piece type (0..6 for white, 6..12 for black)
     piece_bitboards: [Bitboard; 12],
-    /// Mailbox representation of the chess board
     square_contents: [Option<(Piece, Color)>; 64],
+    color_to_move: Color,
+    en_passant_destination: Option<Square>,
+    white_castling_rights: CastlingRights,
+    black_castling_rights: CastlingRights,
 }
 
 impl Default for Board {
@@ -28,6 +30,10 @@ impl Board {
         Self {
             square_contents: [None; 64],
             piece_bitboards: [Bitboard::EMPTY; 12],
+            color_to_move: Color::White,
+            en_passant_destination: None,
+            white_castling_rights: Default::default(),
+            black_castling_rights: Default::default(),
         }
     }
 
@@ -56,6 +62,10 @@ impl Board {
         todo!()
     }
 
+    pub fn make_null_move(&mut self) {
+        todo!();
+    }
+
     pub fn unmake_last_move(&mut self) {
         todo!();
     }
@@ -66,6 +76,21 @@ impl Board {
 
     pub fn iter_pieces_for_color<'board>(&'board self, color: Color) -> PieceIterator<'board> {
         PieceIterator::new(self, Some(color))
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CastlingRights {
+    kingside: bool,
+    queenside: bool,
+}
+
+impl Default for CastlingRights {
+    fn default() -> Self {
+        Self {
+            kingside: true,
+            queenside: true,
+        }
     }
 }
 
