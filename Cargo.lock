@@ -29,11 +29,15 @@ dependencies = [
 [[package]]
 name = "bot"
 version = "0.1.0"
+dependencies = [
+ "chess-lib",
+]
 
 [[package]]
 name = "bot-uci"
 version = "0.1.0"
 dependencies = [
+ "bot",
  "chess-lib",
  "derive-getters",
  "strum",

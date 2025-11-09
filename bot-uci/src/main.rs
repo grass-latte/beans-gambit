@@ -1,6 +1,6 @@
-pub mod state;
+pub mod uci_state;
 
-use crate::state::{UciOptions, slow_global_state, slow_global_state_mut};
+use crate::uci_state::{UciOptions, slow_uci_state, slow_uci_state_mut};
 use std::borrow::Borrow;
 use std::io::BufRead;
 use std::time::Duration;
@@ -40,18 +40,18 @@ fn main() {
                 // Ok
                 send_uci(UciMessage::UciOk);
             }
-            UciMessage::Debug(debug) => slow_global_state_mut().debug = debug,
+            UciMessage::Debug(debug) => slow_uci_state_mut().debug = debug,
             UciMessage::IsReady => {
-                while !slow_global_state().is_ready() {
+                while !slow_uci_state().is_ready() {
                     thread::sleep(Duration::from_millis(5));
                 }
                 send_uci(UciMessage::ReadyOk);
             }
             UciMessage::SetOption { name, value } => {
                 if let Some(value) = value {
-                    slow_global_state_mut().set_option_named(name, value).ok();
+                    slow_uci_state_mut().set_option_named(name, value).ok();
                 } else {
-                    slow_global_state_mut().unset_option_named(name).ok();
+                    slow_uci_state_mut().unset_option_named(name).ok();
                 }
             }
             UciMessage::Register { later, name, code } => {

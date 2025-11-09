@@ -26,22 +26,22 @@ impl UciOptions {
 }
 
 #[derive(Debug)]
-pub struct GlobalState {
+pub struct UciState {
     pub debug: bool,
     command_counter: usize,
     commands_in_progress: HashSet<usize>,
     options: HashMap<UciOptions, String>,
 }
 
-impl Default for GlobalState {
+impl Default for UciState {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl GlobalState {
-    pub fn new() -> GlobalState {
-        GlobalState {
+impl UciState {
+    pub fn new() -> UciState {
+        UciState {
             debug: false,
             command_counter: 0,
             commands_in_progress: HashSet::new(),
@@ -92,18 +92,18 @@ impl GlobalState {
     }
 }
 
-static SLOW_GLOBAL_STATE: OnceLock<RwLock<GlobalState>> = OnceLock::new();
+static SLOW_GLOBAL_STATE: OnceLock<RwLock<UciState>> = OnceLock::new();
 
-pub fn slow_global_state() -> RwLockReadGuard<'static, GlobalState> {
+pub fn slow_uci_state() -> RwLockReadGuard<'static, UciState> {
     SLOW_GLOBAL_STATE
-        .get_or_init(|| RwLock::new(GlobalState::new()))
+        .get_or_init(|| RwLock::new(UciState::new()))
         .read()
         .unwrap()
 }
 
-pub fn slow_global_state_mut() -> RwLockWriteGuard<'static, GlobalState> {
+pub fn slow_uci_state_mut() -> RwLockWriteGuard<'static, UciState> {
     SLOW_GLOBAL_STATE
-        .get_or_init(|| RwLock::new(GlobalState::new()))
+        .get_or_init(|| RwLock::new(UciState::new()))
         .write()
         .unwrap()
 }
