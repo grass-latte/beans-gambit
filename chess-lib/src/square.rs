@@ -1,24 +1,22 @@
 type SquareIndex = usize;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Square(pub SquareIndex);
 
 impl Square {
     pub fn at(file: BoardFile, rank: BoardRank) -> Self {
-        Self(rank.as_index() << 3 + file.as_index())
+        Self(file.as_index() | (rank.as_index() << 3))
     }
 
     /// Returns the square with the given name in algebraic notation, or None
     /// if the name is invalid
+    /// Remainder of the string is ignored
     pub fn from_name(name: &str) -> Option<Self> {
-        if name.len() != 2 {
-            return None;
-        }
         let mut chars = name.chars();
 
         Some(Self::at(
-            BoardFile::from_char(chars.next().unwrap())?,
-            BoardRank::from_char(chars.next().unwrap())?,
+            BoardFile::from_char(chars.next()?)?,
+            BoardRank::from_char(chars.next()?)?,
         ))
     }
 
@@ -35,12 +33,14 @@ impl Square {
     }
 
     /// Returns the name of this square in algebraic notation
-    pub fn name(&mut self) -> [char; 2] {
-        return [self.file().as_char(), self.rank().as_char()];
+    pub fn name(&self) -> String {
+        return [self.file().as_char(), self.rank().as_char()]
+            .iter()
+            .collect();
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct BoardFile(pub SquareIndex);
 
 impl BoardFile {
@@ -63,7 +63,7 @@ impl BoardFile {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct BoardRank(pub SquareIndex);
 
 impl BoardRank {
@@ -150,3 +150,64 @@ pub const E8: Square = Square(60);
 pub const F8: Square = Square(61);
 pub const G8: Square = Square(62);
 pub const H8: Square = Square(63);
+
+pub const FILE_A: BoardFile = BoardFile(0);
+pub const FILE_B: BoardFile = BoardFile(1);
+pub const FILE_C: BoardFile = BoardFile(2);
+pub const FILE_D: BoardFile = BoardFile(3);
+pub const FILE_E: BoardFile = BoardFile(4);
+pub const FILE_F: BoardFile = BoardFile(5);
+pub const FILE_G: BoardFile = BoardFile(6);
+pub const FILE_H: BoardFile = BoardFile(7);
+
+pub const RANK_1: BoardRank = BoardRank(0);
+pub const RANK_2: BoardRank = BoardRank(1);
+pub const RANK_3: BoardRank = BoardRank(2);
+pub const RANK_4: BoardRank = BoardRank(3);
+pub const RANK_5: BoardRank = BoardRank(4);
+pub const RANK_6: BoardRank = BoardRank(5);
+pub const RANK_7: BoardRank = BoardRank(6);
+pub const RANK_8: BoardRank = BoardRank(7);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_square_at() {
+        assert_eq!(Square::at(FILE_A, RANK_1), A1);
+        assert_eq!(Square::at(FILE_B, RANK_2), B2);
+        assert_eq!(Square::at(FILE_H, RANK_1), H1);
+    }
+
+    #[test]
+    fn test_square_file() {
+        assert_eq!(A1.file(), FILE_A);
+        assert_eq!(B2.file(), FILE_B);
+        assert_eq!(H1.file(), FILE_H);
+    }
+
+    #[test]
+    fn test_square_rank() {
+        assert_eq!(A1.rank(), RANK_1);
+        assert_eq!(B2.rank(), RANK_2);
+        assert_eq!(H1.rank(), RANK_1);
+    }
+
+    #[test]
+    fn test_square_name() {
+        assert_eq!(A1.name(), "a1");
+        assert_eq!(B2.name(), "b2");
+        assert_eq!(H1.name(), "h1");
+    }
+
+    #[test]
+    fn test_square_from_name() {
+        assert_eq!(Square::from_name("a1"), Some(A1));
+        assert_eq!(Square::from_name("b2"), Some(B2));
+        assert_eq!(Square::from_name("h1"), Some(H1));
+        assert_eq!(Square::from_name("i9"), None);
+        assert_eq!(Square::from_name(""), None);
+        assert_eq!(Square::from_name("a111"), Some(A1));
+    }
+}
