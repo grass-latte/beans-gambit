@@ -1,22 +1,26 @@
-pub mod bitboard;
-pub mod color;
-pub mod moves;
-pub mod piece;
-pub mod piece_storage;
-pub mod square;
+mod bitboard;
+mod color;
+mod mv;
+mod piece;
+mod piece_storage;
+mod square;
 
-use bitboard::Bitboard;
-use moves::Move;
+pub use bitboard::*;
+pub use color::*;
+use derive_getters::Getters;
+pub use mv::*;
+pub use piece::*;
+pub use piece_storage::*;
+pub use square::*;
 
-use self::{color::Color, piece::Piece, piece_storage::PieceStorage, square::Square};
-
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Getters)]
 pub struct Board {
     pieces: PieceStorage,
     color_to_move: Color,
     en_passant_destination: Option<Square>,
     white_castling_rights: CastlingRights,
     black_castling_rights: CastlingRights,
+    #[getter(skip)]
     unmake_stack: Vec<UnmakeInfo>,
 }
 
@@ -32,7 +36,7 @@ impl Board {
         }
     }
 
-    pub fn make_move(&mut self, mv: Move) -> Result<(), InvalidMove> {
+    pub fn make_move(&mut self, mv: Move) {
         todo!();
     }
 
@@ -44,17 +48,11 @@ impl Board {
     pub fn unmake_last_move(&mut self) {
         todo!();
     }
+}
 
-    pub fn color_to_move(&mut self) -> Color {
-        self.color_to_move
-    }
-
-    pub fn pieces(&self) -> &PieceStorage {
-        &self.pieces
-    }
-
-    pub fn pieces_mut(&mut self) -> &mut PieceStorage {
-        &mut self.pieces
+impl Default for Board {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -72,10 +70,6 @@ impl Default for CastlingRights {
         }
     }
 }
-
-#[derive(Clone, Debug, thiserror::Error)]
-#[error("invalid move")]
-pub struct InvalidMove;
 
 /// Information necessary to unmake the last move
 #[derive(Clone, Copy, Debug)]
