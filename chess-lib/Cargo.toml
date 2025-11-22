@@ -4,3 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+derive-getters = { version = "0.5.0", features = ["auto_copy_getters"]}
+derive_more = { version = "2.0.1", features = ["full"]}
+smallvec = "1.15.1"
+thiserror = "2.0.17"
