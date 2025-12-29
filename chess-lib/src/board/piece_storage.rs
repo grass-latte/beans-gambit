@@ -21,12 +21,12 @@ impl PieceStorage {
     pub const fn set(&mut self, sq: Square, contents: Option<Piece>) {
         // update old piece bitboard
         if let Some(piece) = self.get(sq) {
-            self.piece_bitboards[piece.as_u8() as usize].unset(sq);
+            self.piece_bitboards[piece.as_u8() as usize].remove(sq);
         }
 
         // update new piece bitboard
         if let Some(piece) = contents {
-            self.piece_bitboards[piece.as_u8() as usize].set(sq);
+            self.piece_bitboards[piece.as_u8() as usize].insert(sq);
         }
 
         // update square contents

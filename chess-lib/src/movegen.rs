@@ -19,7 +19,7 @@ impl MoveGenerator {
     }
 
     /// Calculate and return the list of legal moves in the chess position.
-    /// Designed not to allocate in normal cases.
+    /// Should try to avoid allocating.
     pub fn get_legal_moves<'s>(&'s mut self, board: &Board) -> &'s [Move] {
         &self.legal_moves
     }

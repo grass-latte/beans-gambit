@@ -1,8 +1,12 @@
+use std::fmt::{Debug, Write};
+
 use derive_more::{BitAnd, BitOr, BitXor};
+
+use crate::board::{BoardFile, BoardRank};
 
 use super::square::Square;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, BitAnd, BitOr, BitXor)]
+#[derive(Clone, Copy, Eq, PartialEq, BitAnd, BitOr, BitXor)]
 pub struct Bitboard(pub u64);
 
 impl Bitboard {
@@ -15,23 +19,28 @@ impl Bitboard {
         Self(1 << sq.as_u8() as u64)
     }
 
+    /// True if the bit corresponding to `sq` is set.
+    pub const fn contains(self, sq: Square) -> bool {
+        self.0 & (1 << sq.as_u8() as u64) != 0
+    }
+
     /// Sets the bit corresponding to `sq`
-    pub const fn set(&mut self, sq: Square) {
-        *self = self.with_set(sq)
+    pub const fn insert(&mut self, sq: Square) {
+        *self = self.with_inserted(sq)
     }
 
     /// Unsets the bit corresponding to `sq`
-    pub const fn unset(&mut self, sq: Square) {
-        *self = self.with_unset(sq)
+    pub const fn remove(&mut self, sq: Square) {
+        *self = self.with_removed(sq)
     }
 
     /// Returns a copy of this bitboard with `sq` set
-    pub const fn with_set(self, sq: Square) -> Self {
+    pub const fn with_inserted(self, sq: Square) -> Self {
         Self(self.0 | Self::single(sq).0)
     }
 
     /// Returns a copy of this bitboard with `sq` not set
-    pub const fn with_unset(self, sq: Square) -> Self {
+    pub const fn with_removed(self, sq: Square) -> Self {
         Self(self.0 & !Self::single(sq).0)
     }
 
@@ -60,6 +69,22 @@ impl Iterator for BitboardIterator {
     }
 }
 
+impl Debug for Bitboard {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for rank in BoardRank::iter_all().rev() {
+            for file in BoardFile::iter_all() {
+                if self.contains(Square::at(file, rank)) {
+                    f.write_char('#')?;
+                } else {
+                    f.write_char('.')?;
+                }
+            }
+            f.write_char('\n')?;
+        }
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;
@@ -72,7 +97,7 @@ mod tests {
 
         let mut bitboard = Bitboard::empty();
         for square in squares {
-            bitboard.set(square);
+            bitboard.insert(square);
         }
 
         let squares_set: HashSet<Square> = squares.into_iter().collect();

@@ -101,6 +101,11 @@ impl Square {
         ))
     }
 
+    /// Returns an iterator over all board squares in ascending order.
+    pub fn iter_all() -> impl Iterator<Item = Self> + DoubleEndedIterator {
+        (0..64).map(|x| unsafe { Self::from_u8_unchecked(x) })
+    }
+
     pub const fn file(self) -> BoardFile {
         unsafe { BoardFile::from_u8_unchecked(self.as_u8() & 7) }
     }
@@ -159,6 +164,11 @@ impl BoardFile {
         }
     }
 
+    /// Returns an iterator over all board files in ascending order.
+    pub fn iter_all() -> impl Iterator<Item = Self> + DoubleEndedIterator {
+        (0..8).map(|x| unsafe { Self::from_u8_unchecked(x) })
+    }
+
     pub const fn as_u8(self) -> u8 {
         self as u8
     }
@@ -205,6 +215,11 @@ impl BoardRank {
         } else {
             None
         }
+    }
+
+    /// Returns an iterator over all board files in ascending order.
+    pub fn iter_all() -> impl Iterator<Item = Self> + DoubleEndedIterator {
+        (0..8).map(|x| unsafe { Self::from_u8_unchecked(x) })
     }
 
     pub const fn as_u8(self) -> u8 {
