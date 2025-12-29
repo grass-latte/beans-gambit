@@ -19,6 +19,17 @@ impl Bitboard {
         Self(1 << sq.as_u8() as u64)
     }
 
+    /// Mostly used for writing tests.
+    pub fn from_ranks(ranks: [u8; 8]) -> Self {
+        let mut result = 0;
+
+        for (rank_index, rank) in ranks.into_iter().enumerate() {
+            result = result | ((rank as u64) << ((rank_index as u64) * 8));
+        }
+
+        Self(result)
+    }
+
     /// True if the bit corresponding to `sq` is set.
     pub const fn contains(self, sq: Square) -> bool {
         self.0 & (1 << sq.as_u8() as u64) != 0

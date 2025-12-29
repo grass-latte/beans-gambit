@@ -124,6 +124,24 @@ impl Square {
             .iter()
             .collect()
     }
+
+    /// Returns the square given by translating this square by the first offset
+    /// horizontally (-1 is towards the A file) and the second offset vertically (-1 is towards rank 1),
+    /// or None if this square would be off the board.
+    pub fn translated_by(self, (offset_x, offset_y): (i32, i32)) -> Option<Square> {
+        let new_x = self.file().as_u8() as i32 + offset_x;
+        let new_y = self.rank().as_u8() as i32 + offset_y;
+
+        if new_x >= 0 && new_x < 8 && new_y >= 0 && new_y < 8 {
+            // SAFETY: Verified that new_x and new_y are in the right range.
+            Some(Self::at(
+                unsafe { BoardFile::from_u8_unchecked(new_x as u8) },
+                unsafe { BoardRank::from_u8_unchecked(new_y as u8) },
+            ))
+        } else {
+            None
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

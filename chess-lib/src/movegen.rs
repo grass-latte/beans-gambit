@@ -1,11 +1,11 @@
+mod sliding;
+
 use crate::board::{Board, Move};
 
 /// The maximum number of legal moves in a reachable chess position.
 pub const MAXIMUM_LEGAL_MOVES: usize = 218;
 
 /// Responsible for calculating the legal moves on a `Board`.
-/// `MoveGenerators` are slow to create, so you should create and reuse one for the whole search
-/// rather than creating one each time you generate moves.
 #[derive(Clone, Debug)]
 pub struct MoveGenerator {
     legal_moves: Vec<Move>,
