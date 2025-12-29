@@ -33,7 +33,7 @@ impl SlidingAttackTable {
         let sq_index = sq.as_u8() as usize;
         let relevant_occupancy_bitboard =
             all_pieces_bitboard.0 & self.relevant_occupancy_masks[sq_index];
-        let key = (relevant_occupancy_bitboard - self.magics[sq_index])
+        let key = (u64::wrapping_mul(relevant_occupancy_bitboard, self.magics[sq_index]))
             >> (64 - self.relevant_bits[sq_index]);
         self.attack_sets[sq_index][key as usize]
     }
@@ -53,7 +53,7 @@ impl SlidingAttackTable {
                 for relevant_occupancy_bitboard in Self::iter_all_relevant_occupancy_bitboards(
                     Bitboard(relevant_occupancy_masks[sq_index]),
                 ) {
-                    let key = (relevant_occupancy_bitboard.0 - magics[sq_index])
+                    let key = (u64::wrapping_mul(relevant_occupancy_bitboard.0, magics[sq_index]))
                         >> (64 - relevant_bits[sq_index]);
 
                     attack_sets[key as usize] =
@@ -140,11 +140,75 @@ mod precomputed {
 
 #[cfg(test)]
 mod tests {
+    use crate::board::{BoardFile, BoardRank};
+
     use super::*;
+
+    #[test]
+    fn test_generate_rook_attacks() {
+        #[rustfmt::skip]
+        let occupancy_bitboard = Bitboard::from_ranks([
+            0b00000000,
+            0b00001000,
+            0b00000000,
+            0b00000000,
+            0b10000010,
+            0b00000000,
+            0b00001000,
+            0b00000000,
+        ]);
+        #[rustfmt::skip]
+        let expected = Bitboard::from_ranks([
+            0b00000000,
+            0b00001000,
+            0b00001000,
+            0b00001000,
+            0b11110110,
+            0b00001000,
+            0b00001000,
+            0b00000000,
+        ]);
+        let origin = Square::D5;
+        assert_eq!(
+            generate_rook_attack_set(origin, occupancy_bitboard),
+            expected
+        );
+    }
+
+    #[test]
+    fn test_generate_bishop_attacks() {
+        #[rustfmt::skip]
+        let occupancy_bitboard = Bitboard::from_ranks([
+            0b00000000,
+            0b00000000,
+            0b00100000,
+            0b00000100,
+            0b00000000,
+            0b00000000,
+            0b00100000,
+            0b00000001,
+        ]);
+        #[rustfmt::skip]
+        let expected = Bitboard::from_ranks([
+            0b00000000,
+            0b00000000,
+            0b00100000,
+            0b00010100,
+            0b00000000,
+            0b00010100,
+            0b00100010,
+            0b00000001,
+        ]);
+        let origin = Square::D5;
+        assert_eq!(
+            generate_bishop_attack_set(origin, occupancy_bitboard),
+            expected
+        );
+    }
 
     /// Try 1000 random squares and random occupancy bitboards.
     /// Check that the results from the sliding attack table match the results by naively
-    /// generateing attacks
+    /// generateing attacks.
     fn test_attack_table(
         table: SlidingAttackTable,
         ground_truth: impl Fn(Square, Bitboard) -> Bitboard,
@@ -153,17 +217,37 @@ mod tests {
         const TIMES: usize = 1000;
 
         for _ in 0..TIMES {
+            // Random square to search from.
+            let origin = {
+                let file = BoardFile::from_u8(rand::random_range(0..8)).unwrap();
+                let rank = BoardRank::from_u8(rand::random_range(0..8)).unwrap();
+                Square::at(file, rank)
+            };
+
             // Number of pieces on the test board.
             let num_pieces = rand::random_range(0..32);
 
             // Randomly place `num_pieces` pieces on the bitboard.
             let all_pieces_bitboard = {
                 let mut result = Bitboard::empty();
+
+                for _ in 0..num_pieces {
+                    let file = BoardFile::from_u8(rand::random_range(0..8)).unwrap();
+                    let rank = BoardRank::from_u8(rand::random_range(0..8)).unwrap();
+
+                    result.insert(Square::at(file, rank));
+                }
+
+                result
             };
+
+            assert_eq!(
+                ground_truth(origin, all_pieces_bitboard),
+                table.get_attack_set(origin, all_pieces_bitboard)
+            );
         }
     }
 
-    /*
     #[test]
     fn test_rook_attack_table() {
         test_attack_table(
@@ -179,5 +263,4 @@ mod tests {
             generate_bishop_attack_set,
         );
     }
-    */
 }
