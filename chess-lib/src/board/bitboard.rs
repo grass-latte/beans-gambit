@@ -79,7 +79,9 @@ impl Debug for Bitboard {
                     f.write_char('.')?;
                 }
             }
-            f.write_char('\n')?;
+            if rank != BoardRank::R1 {
+                f.write_char('\n')?;
+            }
         }
         Ok(())
     }
@@ -104,5 +106,27 @@ mod tests {
         let recovered_squares_set: HashSet<Square> = bitboard.iter().collect();
 
         assert_eq!(squares_set, recovered_squares_set);
+    }
+
+    #[test]
+    fn test_bitboard_debug() {
+        let bitboard = Bitboard::empty()
+            .with_inserted(Square::A1)
+            .with_inserted(Square::B1)
+            .with_inserted(Square::H8);
+
+        let expected = "\
+            .......#\n\
+            ........\n\
+            ........\n\
+            ........\n\
+            ........\n\
+            ........\n\
+            ........\n\
+            ##......";
+
+        let formatted = format!("{:?}", bitboard);
+
+        assert_eq!(formatted, expected.to_string());
     }
 }
