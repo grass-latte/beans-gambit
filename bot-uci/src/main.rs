@@ -5,11 +5,16 @@ pub mod uci_state;
 
 use crate::uci_state::{UciOptions, slow_uci_state, slow_uci_state_mut};
 use std::borrow::Borrow;
+use std::fs::File;
 use std::io::BufRead;
 use std::time::Duration;
 use std::{io, thread};
 use strum::IntoEnumIterator;
 use vampirc_uci::{UciInfoAttribute, UciMessage, parse_one};
+
+pub const fn version() -> &'static str {
+    env!("CARGO_PKG_VERSION")
+}
 
 fn send_uci<M: Borrow<UciMessage>>(msg: M) {
     println!("{}", msg.borrow());
@@ -26,6 +31,14 @@ fn send_info<S1: AsRef<str>, S2: AsRef<str>>(info: S1, value: S2) {
 }
 
 fn main() {
+    File::create("test.txt").unwrap();
+    println!(
+        "Beans Gambit UCI v{} [Bot v{} | Chess Lib v{}]",
+        version(),
+        bot::version(),
+        chess_lib::version()
+    );
+
     for line in io::stdin().lock().lines() {
         let msg: UciMessage = parse_one(&line.unwrap());
 
