@@ -73,6 +73,14 @@ impl Square {
         unsafe { Self::from_u8_unchecked(file.as_u8() | (rank.as_u8() << 3)) }
     }
 
+    /// SAFETY: Use valid ranks and files, you moron
+    pub const unsafe fn at_xy_unchecked(file: u8, rank: u8) -> Self {
+        Self::at(
+            BoardFile::from_u8_unchecked(file),
+            BoardRank::from_u8_unchecked(rank),
+        )
+    }
+
     pub const fn from_u8(index: u8) -> Option<Self> {
         if index < 64 {
             // SAFETY: `from_u8_unchecked` requires that index < 64.
@@ -144,7 +152,7 @@ impl Square {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Ord, PartialOrd)]
 #[repr(u8)]
 pub enum BoardFile {
     A,
@@ -197,7 +205,7 @@ impl BoardFile {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Ord, PartialOrd)]
 #[repr(u8)]
 pub enum BoardRank {
     R1,
