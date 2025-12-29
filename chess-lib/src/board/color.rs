@@ -6,6 +6,23 @@ pub enum Color {
     White,
 }
 
+impl Color {
+    pub const fn from_is_white(is_white: bool) -> Self {
+        if is_white {
+            Self::White
+        } else {
+            Self::Black
+        }
+    }
+
+    pub const fn is_white(self) -> bool {
+        match self {
+            Self::White => true,
+            Self::Black => false,
+        }
+    }
+}
+
 impl Not for Color {
     type Output = Color;
 
