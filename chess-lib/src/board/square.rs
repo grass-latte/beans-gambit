@@ -1,4 +1,6 @@
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+use strum_macros::EnumIter;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, EnumIter)]
 #[repr(u8)]
 pub enum Square {
     A1,
@@ -109,11 +111,6 @@ impl Square {
         ))
     }
 
-    /// Returns an iterator over all board squares in ascending order.
-    pub fn iter_all() -> impl Iterator<Item = Self> + DoubleEndedIterator {
-        (0..64).map(|x| unsafe { Self::from_u8_unchecked(x) })
-    }
-
     pub const fn file(self) -> BoardFile {
         unsafe { BoardFile::from_u8_unchecked(self.as_u8() & 7) }
     }
@@ -152,7 +149,7 @@ impl Square {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Ord, PartialOrd)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Ord, PartialOrd, EnumIter)]
 #[repr(u8)]
 pub enum BoardFile {
     A,
@@ -190,11 +187,6 @@ impl BoardFile {
         }
     }
 
-    /// Returns an iterator over all board files in ascending order.
-    pub fn iter_all() -> impl Iterator<Item = Self> + DoubleEndedIterator {
-        (0..8).map(|x| unsafe { Self::from_u8_unchecked(x) })
-    }
-
     pub const fn as_u8(self) -> u8 {
         self as u8
     }
@@ -205,7 +197,7 @@ impl BoardFile {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Ord, PartialOrd)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Ord, PartialOrd, EnumIter)]
 #[repr(u8)]
 pub enum BoardRank {
     R1,
@@ -241,11 +233,6 @@ impl BoardRank {
         } else {
             None
         }
-    }
-
-    /// Returns an iterator over all board files in ascending order.
-    pub fn iter_all() -> impl Iterator<Item = Self> + DoubleEndedIterator {
-        (0..8).map(|x| unsafe { Self::from_u8_unchecked(x) })
     }
 
     pub const fn as_u8(self) -> u8 {
