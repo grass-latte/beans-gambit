@@ -4,9 +4,12 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-derive-getters = { version = "0.5.0", features = ["auto_copy_getters"]}
-derive_more = { version = "2.0.1", features = ["full"]}
+derive-getters = { version = "0.5.0", features = ["auto_copy_getters"] }
+derive_more = { version = "2.0.1", features = ["full"] }
 itertools = "0.14.0"
 rand = "0.9.2"
 smallvec = "1.15.1"
 thiserror = "2.0.17"
+log = "0.4.29"
+strum = "0.27.2"
+strum_macros = "0.27.2"

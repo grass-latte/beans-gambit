@@ -1,6 +1,7 @@
 use crate::board::{Piece, bitboard::Bitboard, square::Square};
+use strum::IntoEnumIterator;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PieceStorage {
     piece_bitboards: [Bitboard; 12],
     square_contents: [Option<Piece>; 64],
@@ -31,5 +32,15 @@ impl PieceStorage {
 
         // update square contents
         self.square_contents[sq.as_u8() as usize] = contents;
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = (Square, Piece)> {
+        Piece::iter()
+            .map(|p| {
+                self.piece_bitboards[p.as_u8() as usize]
+                    .iter()
+                    .map(move |s| (s, p))
+            })
+            .flatten()
     }
 }

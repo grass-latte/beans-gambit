@@ -1,13 +1,24 @@
-use std::num::NonZero;
-
 use crate::board::Color;
+use strum_macros::EnumIter;
 
 /// Combination of piece kind and color.
 // The contained u8 is NonZero so that Option<Piece> is one byte. This requires that the type is
-// repr(transparent).
-#[repr(transparent)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Piece(NonZero<u8>);
+#[repr(u8)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, EnumIter)]
+pub enum Piece {
+    BlackPawn = 0,
+    BlackKnight = 1,
+    BlackBishop = 2,
+    BlackRook = 3,
+    BlackQueen = 4,
+    BlackKing = 5,
+    WhitePawn = 6,
+    WhiteKnight = 7,
+    WhiteBishop = 8,
+    WhiteRook = 9,
+    WhiteQueen = 10,
+    WhiteKing = 11,
+}
 
 impl Piece {
     /// Number of different pieces - 6 white, 6 black.
@@ -21,34 +32,39 @@ impl Piece {
         unsafe { Self::from_u8_unchecked(kind_index + color_index * 6) }
     }
 
-    pub const unsafe fn from_u8(v: u8) -> Option<Self> {
-        if v < 12 {
-            // SAFETY: Index is less than 12.
-            Some(unsafe { Self::from_u8_unchecked(v) })
+    pub const fn from_u8(index: u8) -> Option<Self> {
+        if index < Self::COUNT as u8 {
+            // SAFETY: `v` is a valid value for `Self`.
+            Some(unsafe { Self::from_u8_unchecked(index) })
         } else {
             None
         }
     }
 
-    /// SAFETY: Index must be less than 12 (Piece::COUNT).
     pub const unsafe fn from_u8_unchecked(v: u8) -> Self {
-        // SAFETY: We shift the index and add one so that 0 is not a valid value.
-        Self(unsafe { NonZero::new_unchecked((v << 1) | 1) })
+        // SAFETY: Self is repr(u8).
+        unsafe { std::mem::transmute(v) }
     }
 
-    /// Returns a u8 in 0..12 unique to this piece.
     pub const fn as_u8(self) -> u8 {
-        self.0.get() >> 1
+        // SAFETY: Self is repr(u8).
+        unsafe { std::mem::transmute(self) }
+    }
+
+    pub fn from_char(c: char) -> Option<Piece> {
+        Some(Piece::new(
+            PieceKind::from_char(c)?,
+            Color::from_is_white(c.is_ascii_uppercase()),
+        ))
     }
 
     pub const fn kind(self) -> PieceKind {
-        let piece_index = (self.0.get() >> 1) % 6;
         // SAFETY: piece_index < 6.
-        unsafe { PieceKind::from_u8_unchecked(piece_index) }
+        unsafe { PieceKind::from_u8_unchecked(self.as_u8() % 6) }
     }
 
     pub const fn color(self) -> Color {
-        Color::from_is_white((self.0.get() >> 1) > 6)
+        Color::from_is_white(self.as_u8() >= 6)
     }
 }
 
