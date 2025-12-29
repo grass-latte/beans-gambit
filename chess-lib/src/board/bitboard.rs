@@ -1,6 +1,7 @@
 use std::fmt::{Debug, Write};
 
 use derive_more::{BitAnd, BitOr, BitXor};
+use strum::IntoEnumIterator;
 
 use crate::board::{BoardFile, BoardRank};
 
@@ -82,8 +83,8 @@ impl Iterator for BitboardIterator {
 
 impl Debug for Bitboard {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for rank in BoardRank::iter_all().rev() {
-            for file in BoardFile::iter_all() {
+        for rank in BoardRank::iter().rev() {
+            for file in BoardFile::iter() {
                 if self.contains(Square::at(file, rank)) {
                     f.write_char('#')?;
                 } else {

@@ -1,14 +1,16 @@
 /*
  * Terminology:
  *  - Attack set: bitboard of squares attacked by a piece on a given square.
- *  - Pseudolegal: move thats are possible if king safety is ignored.
+ *  - Pseudolegal: moves that are possible if king safety is ignored.
  */
 
 mod precomputed_bitboards;
 mod sliding;
 
+use smallvec::SmallVec;
+
 use crate::{
-    board::{Bitboard, Move, Square},
+    board::{Bitboard, Board, Color, Move, Piece, Square},
     movegen::sliding::SlidingAttackTable,
 };
 
@@ -36,6 +38,30 @@ impl MoveGenerator {
 impl Default for MoveGenerator {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+/// Information important for move generation that doesn't change during movegen (but does change
+/// each turn).
+struct MoveGenContext {
+    side_to_move: Color,
+    friendly_pieces: SmallVec<[(Square, Piece); 16]>,
+    enemy_pieces: SmallVec<[(Square, Piece); 16]>,
+    friendly_pieces_bitboard: Bitboard,
+    enemy_pieces_bitboard: Bitboard,
+    king_square: Square,
+    is_check: bool,
+    /// Bitboard of squares on which the king would be placed in check.
+    king_danger_mask: Bitboard,
+    /// List of enemy pieces that are currently checking the king.
+    checking_pieces: SmallVec<[(Square, Piece); 16]>,
+    /// Bitboard of squares containing pieces pinned to the king.
+    pin_mask: Bitboard,
+}
+
+impl MoveGenContext {
+    fn compute(board: &Board) -> Self {
+        todo!()
     }
 }
 

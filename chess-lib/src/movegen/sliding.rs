@@ -1,4 +1,5 @@
 use itertools::Itertools;
+use strum::IntoEnumIterator;
 
 use super::precomputed_bitboards;
 use crate::board::{Bitboard, Square};
@@ -46,7 +47,7 @@ impl SlidingAttackTable {
         relevant_bits: &'static [u64; 64],
         relevant_occupancy_masks: &'static [u64; 64],
     ) -> Self {
-        let attack_sets = Square::iter_all()
+        let attack_sets = Square::iter()
             .enumerate()
             .map(|(sq_index, sq)| {
                 let table_size = 1 << relevant_bits[sq_index];
