@@ -14,11 +14,11 @@ impl Piece {
     pub const COUNT: usize = 12;
 
     pub const fn new(kind: PieceKind, color: Color) -> Self {
-        let piece_index = kind.as_u8();
+        let kind_index = kind.as_u8();
         let color_index = color.is_white() as u8;
 
         // SAFETY: Index is less than 12.
-        unsafe { Self::from_u8_unchecked(piece_index + color_index * 6) }
+        unsafe { Self::from_u8_unchecked(kind_index + color_index * 6) }
     }
 
     pub const unsafe fn from_u8(v: u8) -> Option<Self> {
@@ -33,7 +33,7 @@ impl Piece {
     /// SAFETY: Index must be less than 12 (Piece::COUNT).
     pub const unsafe fn from_u8_unchecked(v: u8) -> Self {
         // SAFETY: We shift the index and add one so that 0 is not a valid value.
-        Self(unsafe { NonZero::new_unchecked((v << 1) & 1) })
+        Self(unsafe { NonZero::new_unchecked((v << 1) | 1) })
     }
 
     /// Returns a u8 in 0..12 unique to this piece.
@@ -111,5 +111,30 @@ impl PieceKind {
             Self::Queen => 'q',
             Self::King => 'k',
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_piece() {
+        assert_eq!(
+            Piece::new(PieceKind::Bishop, Color::White).kind(),
+            PieceKind::Bishop
+        );
+        assert_eq!(
+            Piece::new(PieceKind::Bishop, Color::White).color(),
+            Color::White
+        );
+        assert_eq!(
+            Piece::new(PieceKind::Knight, Color::Black).kind(),
+            PieceKind::Knight
+        );
+        assert_eq!(
+            Piece::new(PieceKind::Knight, Color::Black).color(),
+            Color::Black
+        );
     }
 }
