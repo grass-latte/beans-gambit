@@ -6,35 +6,37 @@ use super::square::Square;
 pub struct Bitboard(pub u64);
 
 impl Bitboard {
-    pub const EMPTY: Self = Bitboard(0);
+    pub const fn empty() -> Self {
+        Self(0)
+    }
 
     /// Returns the bitboard with only `sq` set
-    pub fn single(sq: Square) -> Self {
-        Self(1 << sq.as_index() as u64)
+    pub const fn single(sq: Square) -> Self {
+        Self(1 << sq.as_u8() as u64)
     }
 
     /// Sets the bit corresponding to `sq`
-    pub fn set(&mut self, sq: Square) {
+    pub const fn set(&mut self, sq: Square) {
         *self = self.with_set(sq)
     }
 
     /// Unsets the bit corresponding to `sq`
-    pub fn unset(&mut self, sq: Square) {
+    pub const fn unset(&mut self, sq: Square) {
         *self = self.with_unset(sq)
     }
 
     /// Returns a copy of this bitboard with `sq` set
-    pub fn with_set(self, sq: Square) -> Self {
+    pub const fn with_set(self, sq: Square) -> Self {
         Self(self.0 | Self::single(sq).0)
     }
 
     /// Returns a copy of this bitboard with `sq` not set
-    pub fn with_unset(self, sq: Square) -> Self {
+    pub const fn with_unset(self, sq: Square) -> Self {
         Self(self.0 & !Self::single(sq).0)
     }
 
     /// Returns an iterator over the squares set in this bitboard
-    pub fn iter(self) -> BitboardIterator {
+    pub const fn iter(self) -> BitboardIterator {
         BitboardIterator(self.0)
     }
 }
@@ -49,7 +51,9 @@ impl Iterator for BitboardIterator {
 
         if trailing_zeros < 64 {
             self.0 &= !(1 << trailing_zeros as u64);
-            Some(Square::from_index(trailing_zeros as usize))
+
+            // SAFETY: `trailing_zeros` is less than 64.
+            Some(unsafe { Square::from_u8_unchecked(trailing_zeros as u8) })
         } else {
             None
         }
@@ -66,7 +70,7 @@ mod tests {
     fn test_bitboard_iterator() {
         let squares = [Square::A1, Square::B2, Square::H1, Square::H8];
 
-        let mut bitboard = Bitboard::EMPTY;
+        let mut bitboard = Bitboard::empty();
         for square in squares {
             bitboard.set(square);
         }

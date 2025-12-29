@@ -76,10 +76,10 @@ impl Default for CastlingRights {
 enum UnmakeInfo {
     Move {
         /// original piece kind, in case of promotion
-        piece: Piece,
+        piece: PieceKind,
         source: Square,
         destination: Square,
-        captured: Option<Piece>,
+        captured: Option<PieceKind>,
         old_castling_rights: CastlingRights,
         old_en_passant_destination: Option<Square>,
     },

@@ -1,5 +1,5 @@
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-#[repr(usize)]
+#[repr(u8)]
 pub enum Square {
     A1,
     B1,
@@ -68,12 +68,24 @@ pub enum Square {
 }
 
 impl Square {
-    pub fn at(file: BoardFile, rank: BoardRank) -> Self {
-        Self::from_index(file.as_index() | (rank.as_index() << 3))
+    pub const fn at(file: BoardFile, rank: BoardRank) -> Self {
+        // SAFETY: Guaranteed to be < 64
+        unsafe { Self::from_u8_unchecked(file.as_u8() | (rank.as_u8() << 3)) }
     }
 
-    pub fn from_index(index: usize) -> Self {
+    pub const fn from_u8(index: u8) -> Option<Self> {
+        if index < 64 {
+            // SAFETY: `from_u8_unchecked` requires that index < 64.
+            Some(unsafe { Self::from_u8_unchecked(index) })
+        } else {
+            None
+        }
+    }
+
+    /// SAFETY: `index` must be less than 64.
+    pub const unsafe fn from_u8_unchecked(index: u8) -> Self {
         debug_assert!(index < 64);
+        // SAFETY: `Self` is repr(u8).
         unsafe { std::mem::transmute(index) }
     }
 
@@ -89,20 +101,20 @@ impl Square {
         ))
     }
 
-    pub fn file(&self) -> BoardFile {
-        BoardFile::from_index(self.as_index() & 7)
+    pub const fn file(self) -> BoardFile {
+        unsafe { BoardFile::from_u8_unchecked(self.as_u8() & 7) }
     }
 
-    pub fn rank(&self) -> BoardRank {
-        BoardRank::from_index(self.as_index() >> 3)
+    pub const fn rank(self) -> BoardRank {
+        unsafe { BoardRank::from_u8_unchecked(self.as_u8() >> 3) }
     }
 
-    pub fn as_index(&self) -> usize {
-        (*self) as usize
+    pub const fn as_u8(self) -> u8 {
+        self as u8
     }
 
     /// Returns the name of this square in algebraic notation
-    pub fn name(&self) -> String {
+    pub fn name(self) -> String {
         [self.file().as_char(), self.rank().as_char()]
             .iter()
             .collect()
@@ -110,7 +122,7 @@ impl Square {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-#[repr(usize)]
+#[repr(u8)]
 pub enum BoardFile {
     A,
     B,
@@ -123,32 +135,42 @@ pub enum BoardFile {
 }
 
 impl BoardFile {
-    pub fn from_index(index: usize) -> Self {
-        debug_assert!(index < 8);
-        unsafe { std::mem::transmute(index) }
-    }
-
-    pub fn from_char(c: char) -> Option<Self> {
-        let index = c as i64 - 'a' as i64;
-        if (0..8).contains(&index) {
-            Some(Self::from_index(index as usize))
+    pub const fn from_u8(index: u8) -> Option<Self> {
+        if index < 8 {
+            // SAFETY: `from_u8_unchecked` requires that index < 8.
+            Some(unsafe { Self::from_u8_unchecked(index) })
         } else {
             None
         }
     }
 
-    pub fn as_index(&self) -> usize {
-        (*self) as usize
+    /// SAFETY: `index` must be less than 8.
+    pub const unsafe fn from_u8_unchecked(index: u8) -> Self {
+        debug_assert!(index < 8);
+        unsafe { std::mem::transmute(index) }
     }
 
-    pub fn as_char(&self) -> char {
+    pub const fn from_char(c: char) -> Option<Self> {
+        let index = c as i64 - 'a' as i64;
+        if index >= 0 && index < 8 {
+            Some(unsafe { Self::from_u8_unchecked(index as u8) })
+        } else {
+            None
+        }
+    }
+
+    pub const fn as_u8(self) -> u8 {
+        self as u8
+    }
+
+    pub const fn as_char(self) -> char {
         const FILES: [char; 8] = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
-        FILES[self.as_index()]
+        FILES[self.as_u8() as usize]
     }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-#[repr(usize)]
+#[repr(u8)]
 pub enum BoardRank {
     R1,
     R2,
@@ -161,34 +183,51 @@ pub enum BoardRank {
 }
 
 impl BoardRank {
-    pub fn from_index(index: usize) -> Self {
-        // ! SAFETY: `BoardRank` has `repr(usize)` and `index` is <8, so this is valid
-        debug_assert!(index < 8);
-        unsafe { std::mem::transmute(index) }
-    }
-
-    pub fn from_char(c: char) -> Option<Self> {
-        let index = c as i64 - '1' as i64;
-        if (0..8).contains(&index) {
-            Some(Self::from_index(index as usize))
+    pub const fn from_u8(index: u8) -> Option<Self> {
+        if index < 8 {
+            // SAFETY: `from_u8_unchecked` requires that index < 8.
+            Some(unsafe { Self::from_u8_unchecked(index) })
         } else {
             None
         }
     }
 
-    pub fn as_index(&self) -> usize {
-        (*self) as usize
+    /// SAFETY: `index` must be less than 8.
+    pub const unsafe fn from_u8_unchecked(index: u8) -> Self {
+        debug_assert!(index < 8);
+        unsafe { std::mem::transmute(index) }
     }
 
-    pub fn as_char(&self) -> char {
+    pub const fn from_char(c: char) -> Option<Self> {
+        let index = c as i64 - '1' as i64;
+        if index >= 0 && index < 8 {
+            Some(unsafe { Self::from_u8_unchecked(index as u8) })
+        } else {
+            None
+        }
+    }
+
+    pub const fn as_u8(self) -> u8 {
+        self as u8
+    }
+
+    pub const fn as_char(self) -> char {
         const RANKS: [char; 8] = ['1', '2', '3', '4', '5', '6', '7', '8'];
-        RANKS[self.as_index()]
+        RANKS[self.as_u8() as usize]
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_square_from_u8() {
+        assert_eq!(Square::from_u8(0), Some(Square::A1));
+        assert_eq!(Square::from_u8(1), Some(Square::B1));
+        assert_eq!(Square::from_u8(63), Some(Square::H8));
+        assert_eq!(Square::from_u8(64), None);
+    }
 
     #[test]
     fn test_square_at() {
