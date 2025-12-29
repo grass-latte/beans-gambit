@@ -1,0 +1,17 @@
+[package]
+name = "cutechess-interface"
+version = "0.1.0"
+edition = "2024"
+
+default-run = "cutechess-interface"
+
+[dependencies]
+color-print = "0.3.7"
+derive-getters = "0.5.0"
+derive-new = "0.7.0"
+dialoguer = { version = "0.12.0" }
+itertools = "0.14.0"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.148"
+strum = "0.27.2"
+strum_macros = "0.27.2"

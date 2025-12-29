@@ -2,3 +2,7 @@ target/
 
 # IDEs
 .idea/
+
+*.log
+config.json
+png.png

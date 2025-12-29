@@ -1,4 +1,4 @@
-use crate::board::{bitboard::Bitboard, color::Color, piece::PieceKind, square::Square, Piece};
+use crate::board::{Piece, bitboard::Bitboard, square::Square};
 
 #[derive(Clone, Debug)]
 pub struct PieceStorage {

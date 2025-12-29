@@ -5,8 +5,11 @@ edition = "2024"
 
 [dependencies]
 chess-lib = { path = "../chess-lib" }
+bot = { path = "../bot" }
 
-derive-getters = "0.5.0"
 strum = "0.27.2"
 strum_macros = "0.27.2"
 vampirc-uci = "0.11.1"
+log = "0.4.29"
+fern = "0.7.1"
+chrono = "0.4.42"
