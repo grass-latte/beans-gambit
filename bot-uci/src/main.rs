@@ -1,15 +1,20 @@
 #![allow(dead_code)]
 #![allow(unused)]
 
-pub mod state;
+pub mod uci_state;
 
-use crate::state::{UciOptions, slow_global_state, slow_global_state_mut};
+use crate::uci_state::{UciOptions, slow_uci_state, slow_uci_state_mut};
 use std::borrow::Borrow;
+use std::fs::File;
 use std::io::BufRead;
 use std::time::Duration;
 use std::{io, thread};
 use strum::IntoEnumIterator;
 use vampirc_uci::{UciInfoAttribute, UciMessage, parse_one};
+
+pub const fn version() -> &'static str {
+    env!("CARGO_PKG_VERSION")
+}
 
 fn send_uci<M: Borrow<UciMessage>>(msg: M) {
     println!("{}", msg.borrow());
@@ -26,6 +31,14 @@ fn send_info<S1: AsRef<str>, S2: AsRef<str>>(info: S1, value: S2) {
 }
 
 fn main() {
+    File::create("test.txt").unwrap();
+    println!(
+        "Beans Gambit UCI v{} [Bot v{} | Chess Lib v{}]",
+        version(),
+        bot::version(),
+        chess_lib::version()
+    );
+
     for line in io::stdin().lock().lines() {
         let msg: UciMessage = parse_one(&line.unwrap());
 
@@ -43,18 +56,18 @@ fn main() {
                 // Ok
                 send_uci(UciMessage::UciOk);
             }
-            UciMessage::Debug(debug) => slow_global_state_mut().debug = debug,
+            UciMessage::Debug(debug) => slow_uci_state_mut().debug = debug,
             UciMessage::IsReady => {
-                while !slow_global_state().is_ready() {
+                while !slow_uci_state().is_ready() {
                     thread::sleep(Duration::from_millis(5));
                 }
                 send_uci(UciMessage::ReadyOk);
             }
             UciMessage::SetOption { name, value } => {
                 if let Some(value) = value {
-                    slow_global_state_mut().set_option_named(name, value).ok();
+                    slow_uci_state_mut().set_option_named(name, value).ok();
                 } else {
-                    slow_global_state_mut().unset_option_named(name).ok();
+                    slow_uci_state_mut().unset_option_named(name).ok();
                 }
             }
             UciMessage::Register { later, name, code } => {

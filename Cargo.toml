@@ -1,3 +1,3 @@
 [workspace]
 resolver = "3"
-members = ["bot", "bot-uci", "chess-gui","chess-lib"]
+members = ["bot", "bot-uci", "chess-gui","chess-lib", "cutechess-interface"]
