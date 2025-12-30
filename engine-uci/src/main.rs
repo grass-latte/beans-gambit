@@ -127,7 +127,8 @@ fn main() {
                     board = Board::from_fen(fen.unwrap().as_str()).unwrap();
                 }
                 for m in moves {
-                    board.make_move(todo!()).unwrap();
+                    todo!()
+                    // board.make_move(todo!()).unwrap();
                 }
             }
             UciMessage::Go {
