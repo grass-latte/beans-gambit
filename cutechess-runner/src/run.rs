@@ -10,6 +10,8 @@ use strum_macros::{Display, EnumIter, EnumString};
 
 #[derive(Debug, Serialize, Deserialize, EnumIter, EnumString, Display)]
 pub enum MatchSetup {
+    #[strum(serialize = "Compliance")]
+    Compliance,
     #[strum(serialize = "Bot v Bot")]
     BotVBot,
     #[strum(serialize = "Bot v White Human")]
@@ -25,8 +27,8 @@ pub struct ChessOptions {
     setup: MatchSetup,
 }
 
-pub fn run(options: ChessOptions, engine_path: PathBuf) {
-    let mut command = Command::new("cutechess-cli");
+fn bot_v_bot(engine_path: PathBuf) {
+    let mut command = Command::new("fastchess");
     let command = command
         .arg("-engine")
         .arg(format!("cmd={}", engine_path.display()))
@@ -54,24 +56,55 @@ pub fn run(options: ChessOptions, engine_path: PathBuf) {
         "<c>Args: {}</>",
         command
             .get_args()
-            .into_iter()
             .map(|s| s.to_string_lossy())
             .collect_vec()
             .join(" ")
     );
 
     let Ok(status) = command.status() else {
-        cprintln!("<r,bold>Failed to run cutechess-cli</>");
+        cprintln!("<r,bold>Failed to run fastchess</>");
         exit(-1);
     };
 
     if status.success() {
         cprintln!("<g,bold>Match finished successfully!</>");
     } else {
-        cprintln!(
-            "<r,bold>cutechess-cli exited with code: {:?}</>",
-            status.code()
-        );
+        cprintln!("<r,bold>fastchess exited with code: {:?}</>", status.code());
         exit(-1);
+    }
+}
+
+fn compliance(engine_path: PathBuf) {
+    let mut command = Command::new("fastchess");
+    let command = command
+        .arg("--compliance")
+        .arg(engine_path.display().to_string());
+
+    cprintln!(
+        "<c>Args: {}</>",
+        command
+            .get_args()
+            .map(|s| s.to_string_lossy())
+            .collect_vec()
+            .join(" ")
+    );
+
+    let Ok(status) = command.status() else {
+        cprintln!("<r,bold>Failed to run fastchess</>");
+        exit(-1);
+    };
+
+    if status.success() {
+        cprintln!("<g,bold>Tool ran successfully!</>");
+    } else {
+        cprintln!("<r,bold>fastchess exited with code: {:?}</>", status.code());
+        exit(-1);
+    }
+}
+
+pub fn run(options: ChessOptions, engine_path: PathBuf) {
+    match options.setup() {
+        MatchSetup::Compliance => compliance(engine_path),
+        _ => todo!(),
     }
 }

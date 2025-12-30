@@ -1,13 +1,9 @@
 use color_print::{cprint, cprintln};
 use std::path::PathBuf;
 use std::process::{Command, exit};
-use std::str::FromStr;
 
 fn cutechess_in_path() -> bool {
-    Command::new("cutechess-cli")
-        .arg("--version")
-        .output()
-        .is_ok()
+    Command::new("fastchess").arg("--version").output().is_ok()
 }
 
 pub fn prerequisites() -> PathBuf {
@@ -17,12 +13,12 @@ pub fn prerequisites() -> PathBuf {
         cprintln!("<cyan,bold>Running in <w>release</> mode</>");
     }
 
-    cprint!("<yellow,bold>Testing cutechess-cli binary...</>");
+    cprint!("<yellow,bold>Testing fastchess binary...</>");
     if !cutechess_in_path() {
-        cprintln!("\r<r,bold>cutechess-cli binary not found</>         ");
+        cprintln!("\r<r,bold>fastchess binary not found</>         ");
         exit(-1);
     }
-    cprintln!("\r<green>cutechess-cli binary found</>         ");
+    cprintln!("\r<green>fastchess binary found</>         ");
 
     cprint!("<yellow,bold>Getting build location...</>");
 
@@ -42,10 +38,7 @@ pub fn prerequisites() -> PathBuf {
         exit(-1);
     };
 
-    let Ok(target_dir) = PathBuf::from_str(target_dir) else {
-        cprintln!("\r<r,bold>Failed to convert target_directory to PathBuf</>         ");
-        exit(-1);
-    };
+    let Ok(target_dir) = PathBuf::froInfalliblem_str(target_dir);
 
     cprintln!(
         "\r<cyan>Target dir: <w>{}</></>         ",
@@ -78,7 +71,7 @@ pub fn prerequisites() -> PathBuf {
         command.join(" ")
     );
 
-    let Ok(status) = Command::new(&command[0])
+    let Ok(status) = Command::new(command[0])
         .args(&command[1..])
         .env("RUSTFLAGS", "-Awarnings")
         .status()
