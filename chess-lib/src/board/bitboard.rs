@@ -24,7 +24,7 @@ impl Bitboard {
         let mut result = 0;
 
         for (rank_index, rank) in ranks.into_iter().enumerate() {
-            result = result | ((rank as u64) << ((rank_index as u64) * 8));
+            result |= (rank as u64) << ((rank_index as u64) * 8);
         }
 
         Self(result)
@@ -72,6 +72,7 @@ impl Iterator for BitboardIterator {
         if trailing_zeros < 64 {
             self.0 &= !(1 << trailing_zeros as u64);
 
+            debug_assert!(trailing_zeros < 64);
             // SAFETY: `trailing_zeros` is less than 64.
             Some(unsafe { Square::from_u8_unchecked(trailing_zeros as u8) })
         } else {

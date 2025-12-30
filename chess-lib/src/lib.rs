@@ -1,3 +1,6 @@
+#![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_assignments)]
 pub mod board;
 pub mod movegen;
 pub mod util;

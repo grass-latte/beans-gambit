@@ -71,16 +71,22 @@ pub enum Square {
 
 impl Square {
     pub const fn at(file: BoardFile, rank: BoardRank) -> Self {
+        debug_assert!(file.as_u8() | (rank.as_u8() << 3) < 64);
         // SAFETY: Guaranteed to be < 64
         unsafe { Self::from_u8_unchecked(file.as_u8() | (rank.as_u8() << 3)) }
     }
 
-    /// SAFETY: Use valid ranks and files, you moron
+    /// # Safety
+    /// `file` and `rank` must be less than 8
     pub const unsafe fn at_xy_unchecked(file: u8, rank: u8) -> Self {
-        Self::at(
-            BoardFile::from_u8_unchecked(file),
-            BoardRank::from_u8_unchecked(rank),
-        )
+        debug_assert!(file < 8 && rank < 8);
+        // SAFETY: Rank and file are less than 8
+        unsafe {
+            Self::at(
+                BoardFile::from_u8_unchecked(file),
+                BoardRank::from_u8_unchecked(rank),
+            )
+        }
     }
 
     pub const fn from_u8(index: u8) -> Option<Self> {
@@ -92,10 +98,11 @@ impl Square {
         }
     }
 
-    /// SAFETY: `index` must be less than 64.
+    /// # Safety
+    /// `index` must be less than 64.
     pub const unsafe fn from_u8_unchecked(index: u8) -> Self {
         debug_assert!(index < 64);
-        // SAFETY: `Self` is repr(u8).
+        // SAFETY: `Self` is repr(u8) and index < 64.
         unsafe { std::mem::transmute(index) }
     }
 
@@ -112,10 +119,13 @@ impl Square {
     }
 
     pub const fn file(self) -> BoardFile {
+        // SAFETY: Guaranteed to be < 8
         unsafe { BoardFile::from_u8_unchecked(self.as_u8() & 7) }
     }
 
     pub const fn rank(self) -> BoardRank {
+        debug_assert!(self.as_u8() >> 3 < 8);
+        // SAFETY: Guaranteed to be < 8
         unsafe { BoardRank::from_u8_unchecked(self.as_u8() >> 3) }
     }
 
@@ -137,12 +147,14 @@ impl Square {
         let new_x = self.file().as_u8() as i32 + offset_x;
         let new_y = self.rank().as_u8() as i32 + offset_y;
 
-        if new_x >= 0 && new_x < 8 && new_y >= 0 && new_y < 8 {
+        if (0..8).contains(&new_x) && (0..8).contains(&new_y) {
             // SAFETY: Verified that new_x and new_y are in the right range.
-            Some(Self::at(
-                unsafe { BoardFile::from_u8_unchecked(new_x as u8) },
-                unsafe { BoardRank::from_u8_unchecked(new_y as u8) },
-            ))
+            unsafe {
+                Some(Self::at(
+                    BoardFile::from_u8_unchecked(new_x as u8),
+                    BoardRank::from_u8_unchecked(new_y as u8),
+                ))
+            }
         } else {
             None
         }
@@ -172,15 +184,18 @@ impl BoardFile {
         }
     }
 
-    /// SAFETY: `index` must be less than 8.
+    /// # Safety
+    /// `index` must be less than 8.
     pub const unsafe fn from_u8_unchecked(index: u8) -> Self {
         debug_assert!(index < 8);
+        // SAFETY: Index is a valid variant representation
         unsafe { std::mem::transmute(index) }
     }
 
     pub const fn from_char(c: char) -> Option<Self> {
         let index = c as i64 - 'a' as i64;
         if index >= 0 && index < 8 {
+            // SAFETY: Index is a valid variant representation
             Some(unsafe { Self::from_u8_unchecked(index as u8) })
         } else {
             None
@@ -220,15 +235,18 @@ impl BoardRank {
         }
     }
 
-    /// SAFETY: `index` must be less than 8.
+    /// # Safety
+    /// `index` must be less than 8.
     pub const unsafe fn from_u8_unchecked(index: u8) -> Self {
         debug_assert!(index < 8);
+        // SAFETY: index is less than 8
         unsafe { std::mem::transmute(index) }
     }
 
     pub const fn from_char(c: char) -> Option<Self> {
         let index = c as i64 - '1' as i64;
         if index >= 0 && index < 8 {
+            // SAFETY: index is 0 - 7
             Some(unsafe { Self::from_u8_unchecked(index as u8) })
         } else {
             None

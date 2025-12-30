@@ -8,13 +8,11 @@ mod square;
 pub use bitboard::*;
 pub use color::*;
 use derive_getters::Getters;
-use itertools::Itertools;
 pub use mv::*;
 pub use piece::*;
 pub use piece_storage::*;
 pub use square::*;
 use std::collections::HashSet;
-use strum::IntoEnumIterator;
 
 #[derive(Clone, Debug, Getters, Eq, PartialEq)]
 pub struct Board {
@@ -38,6 +36,7 @@ impl Board {
         let mut piece_storage = PieceStorage::new();
         for (i, piece) in pieces.iter().enumerate() {
             if let Some(piece) = piece {
+                debug_assert!(i < 64);
                 // SAFETY: pieces length is 64 so the u8 is correct
                 unsafe {
                     piece_storage.set(Square::from_u8_unchecked(i as u8), Some(*piece));
@@ -177,6 +176,8 @@ impl Board {
 
         for y in (0u8..8).rev() {
             for x in 0u8..8 {
+                debug_assert!(x < 8);
+                debug_assert!(y < 8);
                 // SAFETY: Range limited
                 unsafe {
                     if let Some(piece) = self.pieces.get(Square::at_xy_unchecked(x, y)) {
@@ -265,7 +266,7 @@ impl Default for CastlingRights {
 
 /// Information necessary to unmake the last move
 #[derive(Clone, Copy, Debug)]
-enum UnmakeInfo {
+pub enum UnmakeInfo {
     Move {
         /// original piece kind, in case of promotion
         piece: PieceKind,
