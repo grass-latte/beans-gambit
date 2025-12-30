@@ -1,6 +1,7 @@
 use color_print::{cprint, cprintln};
 use std::path::PathBuf;
 use std::process::{Command, exit};
+use std::str::FromStr;
 
 fn cutechess_in_path() -> bool {
     Command::new("fastchess").arg("--version").output().is_ok()
@@ -38,7 +39,7 @@ pub fn prerequisites() -> PathBuf {
         exit(-1);
     };
 
-    let Ok(target_dir) = PathBuf::froInfalliblem_str(target_dir);
+    let Ok(target_dir) = PathBuf::from_str(target_dir);
 
     cprintln!(
         "\r<cyan>Target dir: <w>{}</></>         ",
