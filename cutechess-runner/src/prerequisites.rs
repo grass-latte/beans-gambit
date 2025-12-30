@@ -53,21 +53,28 @@ pub fn prerequisites() -> PathBuf {
     );
 
     let command: &[&str] = if cfg!(debug_assertions) {
-        &["cargo", "build", "--package", "bot-uci", "--bin", "bot-uci"]
+        &[
+            "cargo",
+            "build",
+            "--package",
+            "engine-uci",
+            "--bin",
+            "engine-uci",
+        ]
     } else {
         &[
             "cargo",
             "build",
             "--package",
-            "bot-uci",
+            "engine-uci",
             "--bin",
-            "bot-uci",
+            "engine-uci",
             "--release",
         ]
     };
 
     cprintln!(
-        "<yellow,bold>Building bot-uci from package bot-uci <w>[{}]</>...</>",
+        "<yellow,bold>Building engine-uci from package engine-uci <w>[{}]</>...</>",
         command.join(" ")
     );
 
@@ -86,9 +93,9 @@ pub fn prerequisites() -> PathBuf {
     }
 
     let exe_path = if cfg!(debug_assertions) {
-        target_dir.join("debug").join("bot-uci")
+        target_dir.join("debug").join("engine-uci")
     } else {
-        target_dir.join("release").join("bot-uci")
+        target_dir.join("release").join("engine-uci")
     };
     if !exe_path.is_file() {
         cprintln!("<r,bold>Executable not found at {}</>", exe_path.display());

@@ -1,19 +1,19 @@
 #![allow(dead_code)]
 #![allow(unused)]
 
-pub mod uci_state;
+mod uci_state;
 
-use crate::uci_state::{UciOptions, slow_uci_state, slow_uci_state_mut};
+use crate::uci_state::{UciOptions, UciState};
+use chess_lib::board::{Board, Move};
 use chrono::Local;
 use fern::Dispatch;
-use log::{debug, info};
+use log::{debug, error, info, warn};
 use std::borrow::Borrow;
 use std::fs::File;
 use std::io::BufRead;
 use std::time::Duration;
 use std::{io, thread};
 use strum::IntoEnumIterator;
-use vampirc_uci::Rule::debug;
 use vampirc_uci::{UciInfoAttribute, UciMessage, parse_one};
 
 pub const fn version() -> &'static str {
@@ -36,6 +36,10 @@ fn send_info<S1: AsRef<str>, S2: AsRef<str>>(info: S1, value: S2) {
 }
 
 fn main() {
+    std::panic::set_hook(Box::new(|info| {
+        log::error!("panic: {info}");
+    }));
+
     let dispatch = Dispatch::new()
         .format(|out, message, record| {
             out.finish(format_args!(
@@ -47,7 +51,7 @@ fn main() {
         })
         .chain(
             fern::log_file(format!(
-                "bot-uci_{}.log",
+                "engine-uci_{}.log",
                 Local::now().format("%Y-%m-%d_%H-%M-%S_%6f")
             ))
             .unwrap(),
@@ -59,11 +63,15 @@ fn main() {
         dispatch.level(log::LevelFilter::Info).apply().unwrap();
     }
 
+    let mut debug = false;
+    let mut state = UciState::new();
+    let mut board = Board::starting();
+
     println!(
         "Beans Gambit UCI v{} [Bot v{} | Chess Lib v{}]",
         version(),
-        bot::version(),
-        bot::chess_lib_version()
+        engine::version(),
+        chess_lib::version()
     );
 
     info!("Waiting for stdin");
@@ -91,50 +99,58 @@ fn main() {
                 // Ok
                 send_uci(UciMessage::UciOk);
             }
-            UciMessage::Debug(is_debug) => slow_uci_state_mut().debug = is_debug,
+            UciMessage::Debug(is_debug) => debug = is_debug,
             UciMessage::IsReady => {
-                while !slow_uci_state().is_ready() {
-                    thread::sleep(Duration::from_millis(5));
-                }
                 send_uci(UciMessage::ReadyOk);
             }
             UciMessage::SetOption { name, value } => {
                 if let Some(value) = value {
-                    slow_uci_state_mut().set_option_named(name, value).ok();
+                    state.set_option_named(name, value).ok();
                 } else {
-                    slow_uci_state_mut().unset_option_named(name).ok();
+                    state.unset_option_named(name).ok();
                 }
             }
             UciMessage::Register { later, name, code } => {
-                // TODO
+                todo!()
             }
             UciMessage::UciNewGame => {
-                // TODO
+                // TODO (no internal state to reset yet)
             }
             UciMessage::Position {
                 startpos,
                 fen,
                 moves,
             } => {
-                // TODO
+                if startpos {
+                    board = Board::starting();
+                } else {
+                    board = Board::from_fen(fen.unwrap().as_str()).unwrap();
+                }
+                for m in moves {
+                    board.make_move(todo!()).unwrap();
+                }
             }
             UciMessage::Go {
                 time_control,
                 search_control,
             } => {
-                // TODO
+                todo!()
             }
             UciMessage::Stop => {
-                // TODO
+                todo!()
             }
             UciMessage::PonderHit => {
-                // TODO
+                todo!()
             }
             UciMessage::Quit => {
-                // TODO
+                todo!()
             }
-            UciMessage::Unknown(_, _) => {}
-            _ => {}
+            UciMessage::Unknown(_, _) => {
+                warn!("Unknown UCI message: {:?}", msg);
+            }
+            _ => {
+                warn!("Unhandled UCI message: {:?}", msg);
+            }
         };
     }
 }

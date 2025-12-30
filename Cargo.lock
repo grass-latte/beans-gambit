@@ -33,27 +33,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bot"
-version = "0.1.0"
-dependencies = [
- "chess-lib",
- "log",
-]
-
-[[package]]
-name = "bot-uci"
-version = "0.1.0"
-dependencies = [
- "bot",
- "chrono",
- "fern",
- "log",
- "strum",
- "strum_macros",
- "vampirc-uci",
-]
-
-[[package]]
 name = "bumpalo"
 version = "3.19.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -176,7 +155,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "cutechess-interface"
+name = "cutechess-runner"
 version = "0.1.0"
 dependencies = [
  "color-print",
@@ -268,6 +247,29 @@ name = "encode_unicode"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "34aa73646ffb006b8f5147f3dc182bd4bcb190227ce861fc4a4844bf8e3cb2c0"
+
+[[package]]
+name = "engine"
+version = "0.1.0"
+dependencies = [
+ "chess-lib",
+ "derive-new",
+ "log",
+]
+
+[[package]]
+name = "engine-uci"
+version = "0.1.0"
+dependencies = [
+ "chess-lib",
+ "chrono",
+ "engine",
+ "fern",
+ "log",
+ "strum",
+ "strum_macros",
+ "vampirc-uci",
+]
 
 [[package]]
 name = "errno"
