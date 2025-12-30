@@ -63,7 +63,7 @@ fn main() {
         "Beans Gambit UCI v{} [Bot v{} | Chess Lib v{}]",
         version(),
         bot::version(),
-        chess_lib::version()
+        bot::chess_lib_version()
     );
 
     info!("Waiting for stdin");
