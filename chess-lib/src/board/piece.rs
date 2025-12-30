@@ -1,54 +1,83 @@
-use std::num::NonZero;
-
 use crate::board::Color;
+use strum_macros::EnumIter;
 
 /// Combination of piece kind and color.
 // The contained u8 is NonZero so that Option<Piece> is one byte. This requires that the type is
-// repr(transparent).
-#[repr(transparent)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Piece(NonZero<u8>);
+#[repr(u8)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, EnumIter)]
+pub enum Piece {
+    BlackPawn,
+    BlackKnight,
+    BlackBishop,
+    BlackRook,
+    BlackQueen,
+    BlackKing,
+    WhitePawn,
+    WhiteKnight,
+    WhiteBishop,
+    WhiteRook,
+    WhiteQueen,
+    WhiteKing,
+}
 
 impl Piece {
     /// Number of different pieces - 6 white, 6 black.
     pub const COUNT: usize = 12;
 
     pub const fn new(kind: PieceKind, color: Color) -> Self {
-        let piece_index = kind.as_u8();
+        let kind_index = kind.as_u8();
         let color_index = color.is_white() as u8;
 
+        debug_assert!(kind_index + color_index * 6 < Piece::COUNT as u8);
         // SAFETY: Index is less than 12.
-        unsafe { Self::from_u8_unchecked(piece_index + color_index * 6) }
+        unsafe { Self::from_u8_unchecked(kind_index + color_index * 6) }
     }
 
-    pub const unsafe fn from_u8(v: u8) -> Option<Self> {
-        if v < 12 {
-            // SAFETY: Index is less than 12.
-            Some(unsafe { Self::from_u8_unchecked(v) })
+    pub const fn from_u8(index: u8) -> Option<Self> {
+        if index < Self::COUNT as u8 {
+            // SAFETY: `v` is a valid value for `Self`.
+            Some(unsafe { Self::from_u8_unchecked(index) })
         } else {
             None
         }
     }
 
-    /// SAFETY: Index must be less than 12 (Piece::COUNT).
+    /// # Safety
+    /// `v` must be less than 12
     pub const unsafe fn from_u8_unchecked(v: u8) -> Self {
-        // SAFETY: We shift the index and add one so that 0 is not a valid value.
-        Self(unsafe { NonZero::new_unchecked((v << 1) & 1) })
+        debug_assert!(v < Self::COUNT as u8);
+        // SAFETY: v is a valid variant representation.
+        unsafe { std::mem::transmute(v) }
     }
 
-    /// Returns a u8 in 0..12 unique to this piece.
     pub const fn as_u8(self) -> u8 {
-        self.0.get() >> 1
+        // SAFETY: Self is repr(u8).
+        unsafe { std::mem::transmute(self) }
+    }
+
+    pub fn from_char(c: char) -> Option<Piece> {
+        Some(Piece::new(
+            PieceKind::from_char(c)?,
+            Color::from_is_white(c.is_ascii_uppercase()),
+        ))
+    }
+
+    pub const fn as_char(self) -> char {
+        let c = self.kind().as_char();
+        if self.color().is_white() {
+            c.to_ascii_uppercase()
+        } else {
+            c
+        }
     }
 
     pub const fn kind(self) -> PieceKind {
-        let piece_index = (self.0.get() >> 1) % 6;
         // SAFETY: piece_index < 6.
-        unsafe { PieceKind::from_u8_unchecked(piece_index) }
+        unsafe { PieceKind::from_u8_unchecked(self.as_u8() % 6) }
     }
 
     pub const fn color(self) -> Color {
-        Color::from_is_white((self.0.get() >> 1) > 6)
+        Color::from_is_white(self.as_u8() >= 6)
     }
 }
 
@@ -68,15 +97,17 @@ impl PieceKind {
 
     pub const fn from_u8(index: u8) -> Option<Self> {
         if index < Self::COUNT as u8 {
-            // SAFETY: `v` is a valid value for `Self`.
+            // SAFETY: `v` is less than 6
             Some(unsafe { Self::from_u8_unchecked(index) })
         } else {
             None
         }
     }
 
+    /// # Safety
+    /// `v` must be less than 6
     pub const unsafe fn from_u8_unchecked(v: u8) -> Self {
-        // SAFETY: Self is repr(u8).
+        debug_assert!(v < Self::COUNT as u8);
         unsafe { std::mem::transmute(v) }
     }
 
@@ -94,14 +125,14 @@ impl PieceKind {
             'b' | 'B' => Self::Bishop,
             'r' | 'R' => Self::Rook,
             'q' | 'Q' => Self::Queen,
-            'k' | 'K' => Self::Rook,
+            'k' | 'K' => Self::King,
             _ => {
                 return None;
             }
         })
     }
 
-    /// Returns the character representing this piece in English algebraic notation
+    /// Returns the character representing this piece in lowercase English algebraic notation
     pub const fn as_char(self) -> char {
         match self {
             Self::Pawn => 'p',
@@ -111,5 +142,30 @@ impl PieceKind {
             Self::Queen => 'q',
             Self::King => 'k',
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_piece() {
+        assert_eq!(
+            Piece::new(PieceKind::Bishop, Color::White).kind(),
+            PieceKind::Bishop
+        );
+        assert_eq!(
+            Piece::new(PieceKind::Bishop, Color::White).color(),
+            Color::White
+        );
+        assert_eq!(
+            Piece::new(PieceKind::Knight, Color::Black).kind(),
+            PieceKind::Knight
+        );
+        assert_eq!(
+            Piece::new(PieceKind::Knight, Color::Black).color(),
+            Color::Black
+        );
     }
 }

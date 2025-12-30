@@ -1,9 +1,16 @@
-use crate::board::{bitboard::Bitboard, color::Color, piece::PieceKind, square::Square, Piece};
+use crate::board::{Piece, bitboard::Bitboard, square::Square};
+use strum::IntoEnumIterator;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PieceStorage {
     piece_bitboards: [Bitboard; 12],
     square_contents: [Option<Piece>; 64],
+}
+
+impl Default for PieceStorage {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl PieceStorage {
@@ -21,15 +28,23 @@ impl PieceStorage {
     pub const fn set(&mut self, sq: Square, contents: Option<Piece>) {
         // update old piece bitboard
         if let Some(piece) = self.get(sq) {
-            self.piece_bitboards[piece.as_u8() as usize].unset(sq);
+            self.piece_bitboards[piece.as_u8() as usize].remove(sq);
         }
 
         // update new piece bitboard
         if let Some(piece) = contents {
-            self.piece_bitboards[piece.as_u8() as usize].set(sq);
+            self.piece_bitboards[piece.as_u8() as usize].insert(sq);
         }
 
         // update square contents
         self.square_contents[sq.as_u8() as usize] = contents;
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = (Square, Piece)> {
+        Piece::iter().flat_map(|p| {
+            self.piece_bitboards[p.as_u8() as usize]
+                .iter()
+                .map(move |s| (s, p))
+        })
     }
 }

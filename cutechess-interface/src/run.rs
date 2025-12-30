@@ -5,6 +5,7 @@ use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::process::{Command, exit};
+use std::str::FromStr;
 use strum_macros::{Display, EnumIter, EnumString};
 
 #[derive(Debug, Serialize, Deserialize, EnumIter, EnumString, Display)]
@@ -28,11 +29,22 @@ pub fn run(options: ChessOptions, engine_path: PathBuf) {
     let mut command = Command::new("cutechess-cli");
     let command = command
         .arg("-engine")
-        .arg(format!("cmd=\"{}\"", engine_path.display()))
+        .arg(format!("cmd={}", engine_path.display()))
+        .arg("name=E1")
         .arg("-engine")
-        .arg(format!("cmd=\"{}\"", engine_path.display()))
+        .arg(format!("cmd={}", engine_path.display()))
+        .arg("name=E2")
         .arg("-each")
         .arg("tc=5+0")
+        .arg("proto=uci")
+        .arg(format!(
+            "dir=\"{}\"",
+            PathBuf::from_str(".")
+                .unwrap()
+                .canonicalize()
+                .unwrap()
+                .display()
+        ))
         .arg("-games")
         .arg("1")
         .arg("-pgnout")

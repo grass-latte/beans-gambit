@@ -8,17 +8,20 @@ pub enum Color {
 
 impl Color {
     pub const fn from_is_white(is_white: bool) -> Self {
-        if is_white {
-            Self::White
-        } else {
-            Self::Black
-        }
+        if is_white { Self::White } else { Self::Black }
     }
 
     pub const fn is_white(self) -> bool {
         match self {
             Self::White => true,
             Self::Black => false,
+        }
+    }
+
+    pub const fn as_char(self) -> char {
+        match self {
+            Self::White => 'w',
+            Self::Black => 'b',
         }
     }
 }
