@@ -1,8 +1,10 @@
 [package]
-name = "bot"
+name = "engine"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+chess-lib = { path = "../chess-lib" }
+
 log = "0.4.29"
-# Test
+derive-new = "0.7.0"

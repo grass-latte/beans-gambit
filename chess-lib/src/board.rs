@@ -21,7 +21,8 @@ pub struct Board {
     en_passant_destination: Option<Square>,
     white_castling_rights: CastlingRights,
     black_castling_rights: CastlingRights,
-    halfmoves: usize,
+    halfmoves_since_event: usize, // Since last capture or pawn move
+    fullmoves: usize,
 }
 
 impl Board {
@@ -31,7 +32,8 @@ impl Board {
         en_passant_destination: Option<Square>,
         white_castling_rights: CastlingRights,
         black_castling_rights: CastlingRights,
-        halfmoves: usize,
+        halfmoves_since_event: usize,
+        fullmoves: usize,
     ) -> Board {
         let mut piece_storage = PieceStorage::new();
         for (i, piece) in pieces.iter().enumerate() {
@@ -50,7 +52,8 @@ impl Board {
             en_passant_destination,
             white_castling_rights,
             black_castling_rights,
-            halfmoves,
+            halfmoves_since_event,
+            fullmoves,
         }
     }
 
@@ -61,6 +64,7 @@ impl Board {
             None,
             Default::default(),
             Default::default(),
+            0,
             0,
         )
     }
@@ -113,7 +117,11 @@ impl Board {
         };
 
         // * Castling availability
-        let castling_chars: HashSet<char> = HashSet::from_iter(sections[2].chars());
+        let castling_chars: HashSet<char> = if sections[2] == "-" {
+            HashSet::new()
+        } else {
+            HashSet::from_iter(sections[2].chars())
+        };
 
         for c in castling_chars.iter() {
             match c {
@@ -146,8 +154,8 @@ impl Board {
             Some(square)
         };
 
-        // * Halfmoves
-        let Ok(halfmoves): Result<usize, _> = sections[4].parse() else {
+        // * Halfmoves since last capture or pawn move
+        let Ok(halfmoves_since_event): Result<usize, _> = sections[4].parse() else {
             return invalid_fen_err("halfmoves not a number".to_string());
         };
 
@@ -155,9 +163,6 @@ impl Board {
         let Ok(fullmoves): Result<usize, _> = sections[5].parse() else {
             return invalid_fen_err("fullmoves not a number".to_string());
         };
-        if fullmoves != (halfmoves / 2) + 1 {
-            return invalid_fen_err("fullmoves not (halfmoves/2) + 1".to_string());
-        }
 
         Ok(Board::new(
             &pieces,
@@ -165,7 +170,8 @@ impl Board {
             en_passant,
             white_castling_rights,
             black_castling_rights,
-            halfmoves,
+            halfmoves_since_event,
+            fullmoves,
         ))
     }
 
@@ -230,12 +236,12 @@ impl Board {
             output += " -";
         }
 
-        output += &format!(" {} {}", self.halfmoves, (self.halfmoves / 2) + 1);
+        output += &format!(" {} {}", self.halfmoves_since_event, self.fullmoves);
 
         output
     }
 
-    pub fn make_move(&mut self, mv: Move) {
+    pub fn make_move(&mut self, mv: Move) -> Result<(), String> {
         todo!();
     }
 
