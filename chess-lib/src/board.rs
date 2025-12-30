@@ -7,7 +7,6 @@ mod square;
 
 pub use bitboard::*;
 pub use color::*;
-use derive_getters::Getters;
 use itertools::Itertools;
 pub use mv::*;
 pub use piece::*;
@@ -16,7 +15,7 @@ pub use square::*;
 use std::cmp::Ordering;
 use std::collections::HashSet;
 
-#[derive(Clone, Debug, Getters, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Board {
     pieces: PieceStorage,
     color_to_move: Color,
@@ -202,12 +201,32 @@ impl Board {
     pub fn unmake_last_move(&mut self) {
         todo!();
     }
+
+    pub fn pieces(&self) -> &PieceStorage {
+        &self.pieces
+    }
+
+    pub fn color_to_move(&self) -> Color {
+        self.color_to_move
+    }
+
+    pub fn en_passant_destination(&self) -> Option<Square> {
+        self.en_passant_destination
+    }
+
+    pub fn white_castling_rights(&self) -> CastlingRights {
+        self.white_castling_rights
+    }
+
+    pub fn black_castling_rights(&self) -> CastlingRights {
+        self.black_castling_rights
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CastlingRights {
-    kingside: bool,
-    queenside: bool,
+    pub kingside: bool,
+    pub queenside: bool,
 }
 
 impl Default for CastlingRights {

@@ -36,14 +36,18 @@ impl Bitboard {
         self.0 & (1 << sq.as_u8() as u64) != 0
     }
 
-    /// Sets the bit corresponding to `sq`
+    /// Sets the bit corresponding to `sq` to true.
     pub const fn insert(&mut self, sq: Square) {
         *self = self.with_inserted(sq)
     }
 
-    /// Unsets the bit corresponding to `sq`
+    /// Sets the bit corresponding to `sq` to false.
     pub const fn remove(&mut self, sq: Square) {
         *self = self.with_removed(sq)
+    }
+
+    pub const fn insert_if(&mut self, sq: Square, condition: bool) {
+        self.0 = self.0 | (Self::single(sq).0 * (condition as u64));
     }
 
     /// Returns a copy of this bitboard with `sq` set

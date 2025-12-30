@@ -69,7 +69,7 @@ impl Piece {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, EnumIter)]
 pub enum PieceKind {
     Pawn = 0,
     Knight = 1,
