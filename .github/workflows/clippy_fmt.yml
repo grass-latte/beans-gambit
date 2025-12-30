@@ -1,4 +1,4 @@
-name: Rust Clippy / Fmt
+name: Rust Fmt & Clippy
 
 on:
   push:
