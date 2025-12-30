@@ -17,6 +17,13 @@ impl Color {
             Self::Black => false,
         }
     }
+
+    pub const fn as_char(self) -> char {
+        match self {
+            Self::White => 'w',
+            Self::Black => 'b',
+        }
+    }
 }
 
 impl Not for Color {

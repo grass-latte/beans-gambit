@@ -13,8 +13,8 @@ pub use mv::*;
 pub use piece::*;
 pub use piece_storage::*;
 pub use square::*;
-use std::cmp::Ordering;
 use std::collections::HashSet;
+use strum::IntoEnumIterator;
 
 #[derive(Clone, Debug, Getters, Eq, PartialEq)]
 pub struct Board {
@@ -139,18 +139,12 @@ impl Board {
             if sections[3].len() != 2 {
                 return invalid_fen_err("en passant must be '-' or 2 character".to_string());
             }
-            let mut chars = sections[3].chars();
-            let file = chars.next().unwrap();
-            let rank = chars.next().unwrap();
 
-            let Some(file) = BoardFile::from_char(file) else {
-                return invalid_fen_err("invalid en passant file".to_string());
-            };
-            let Some(rank) = BoardRank::from_char(rank) else {
-                return invalid_fen_err("invalid en passant rank".to_string());
+            let Some(square) = Square::from_name(sections[3]) else {
+                return invalid_fen_err("invalid en passant square".to_string());
             };
 
-            Some(Square::at(file, rank))
+            Some(square)
         };
 
         // * Halfmoves
@@ -177,17 +171,67 @@ impl Board {
     }
 
     pub fn to_fen(&self) -> String {
-        let mut pieces = self.pieces().iter().collect_vec();
+        let mut output = String::new();
 
-        pieces.sort_by(|(asq, _), (bsq, _)| {
-            if asq.rank() == bsq.rank() && asq.file() < bsq.file() || asq.rank() > bsq.rank() {
-                Ordering::Less
-            } else {
-                Ordering::Greater
+        let mut cur_x = 0;
+
+        for y in (0u8..8).rev() {
+            for x in 0u8..8 {
+                // SAFETY: Range limited
+                unsafe {
+                    if let Some(piece) = self.pieces.get(Square::at_xy_unchecked(x, y)) {
+                        if cur_x != x {
+                            output += &format!("{}", x - cur_x);
+                            cur_x = x;
+                        }
+
+                        output.push(piece.as_char());
+
+                        cur_x += 1;
+                    }
+                }
             }
-        });
 
-        todo!();
+            if cur_x != 8 {
+                output += &format!("{}", 8 - cur_x);
+            }
+            cur_x = 0;
+
+            if y != 0 {
+                output.push('/');
+            }
+        }
+
+        output += &format!(" {} ", self.color_to_move.as_char());
+
+        let mut castling_string = String::new();
+        if self.white_castling_rights.kingside {
+            castling_string.push('K');
+        }
+        if self.white_castling_rights.queenside {
+            castling_string.push('Q');
+        }
+        if self.black_castling_rights.kingside {
+            castling_string.push('k');
+        }
+        if self.black_castling_rights.queenside {
+            castling_string.push('q');
+        }
+        if castling_string.is_empty() {
+            castling_string.push('-');
+        }
+
+        output += &castling_string;
+
+        if let Some(square) = self.en_passant_destination {
+            output += &format!(" {}", square.name())
+        } else {
+            output += " -";
+        }
+
+        output += &format!(" {} {}", self.halfmoves, (self.halfmoves / 2) + 1);
+
+        output
     }
 
     pub fn make_move(&mut self, mv: Move) {
@@ -232,4 +276,15 @@ enum UnmakeInfo {
         old_en_passant_destination: Option<Square>,
     },
     NullMove,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_fen_forward_back() {
+        const FEN: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+        assert_eq!(Board::from_fen(FEN).unwrap().to_fen(), FEN);
+    }
 }

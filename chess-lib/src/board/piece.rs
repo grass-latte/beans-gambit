@@ -58,6 +58,15 @@ impl Piece {
         ))
     }
 
+    pub const fn as_char(self) -> char {
+        let c = self.kind().as_char();
+        if self.color().is_white() {
+            c.to_ascii_uppercase()
+        } else {
+            c
+        }
+    }
+
     pub const fn kind(self) -> PieceKind {
         // SAFETY: piece_index < 6.
         unsafe { PieceKind::from_u8_unchecked(self.as_u8() % 6) }
@@ -110,14 +119,14 @@ impl PieceKind {
             'b' | 'B' => Self::Bishop,
             'r' | 'R' => Self::Rook,
             'q' | 'Q' => Self::Queen,
-            'k' | 'K' => Self::Rook,
+            'k' | 'K' => Self::King,
             _ => {
                 return None;
             }
         })
     }
 
-    /// Returns the character representing this piece in English algebraic notation
+    /// Returns the character representing this piece in lowercase English algebraic notation
     pub const fn as_char(self) -> char {
         match self {
             Self::Pawn => 'p',

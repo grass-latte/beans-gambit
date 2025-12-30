@@ -1,6 +1,6 @@
-use itertools::Itertools;
-
 use crate::board::{Bitboard, Square};
+use itertools::Itertools;
+use strum::IntoEnumIterator;
 
 /// Implements the "magic bitboards" approach to sliding piece movegen.
 pub struct SlidingAttackTable {
@@ -44,7 +44,7 @@ impl SlidingAttackTable {
         relevant_bits: &'static [u64; 64],
         relevant_occupancy_masks: &'static [u64; 64],
     ) -> Self {
-        let attack_sets = Square::iter_all()
+        let attack_sets = Square::iter()
             .enumerate()
             .map(|(sq_index, sq)| {
                 let table_size = 1 << relevant_bits[sq_index];
