@@ -160,6 +160,15 @@ impl MoveGenerator {
                 let valid_capture_destinations = enemy_pieces_bitboard
                     | board
                         .en_passant_destination()
+                        .filter(|&en_passant_destination| {
+                            !self.detect_en_passant_pin(
+                                board,
+                                all_pieces_bitboard,
+                                sq,
+                                king_square,
+                                en_passant_destination,
+                            )
+                        })
                         .map(Bitboard::single)
                         .unwrap_or(Bitboard::empty());
 
@@ -269,6 +278,8 @@ impl MoveGenerator {
             && !kingside_castle_clear_mask
                 .intersects(all_pieces_bitboard | checks_analysis.king_danger_mask)
             && !is_check
+            && board.pieces().get(Square::at(BoardFile::H, back_rank))
+                == Some(Piece::new(PieceKind::Rook, board.color_to_move()))
         {
             self.moves.push(Move {
                 source: Square::at(BoardFile::E, back_rank),
@@ -281,6 +292,8 @@ impl MoveGenerator {
             && !queenside_castle_clear_mask.intersects(all_pieces_bitboard)
             && !queenside_castle_danger_mask.intersects(checks_analysis.king_danger_mask)
             && !is_check
+            && board.pieces().get(Square::at(BoardFile::A, back_rank))
+                == Some(Piece::new(PieceKind::Rook, board.color_to_move()))
         {
             self.moves.push(Move {
                 source: Square::at(BoardFile::E, back_rank),
@@ -416,6 +429,57 @@ impl MoveGenerator {
             checking_pieces_mask,
             pinned_pieces_mask: orthogonal_pin_mask | diagonal_pin_mask,
         }
+    }
+
+    /// Detect the annoying en passant pin, when the capturing pawn and the captured pawn are the
+    /// only pieces blocking a horizontal check by a rook.
+    fn detect_en_passant_pin(
+        &self,
+        board: &Board,
+        all_pieces_bitboard: Bitboard,
+        capturing_pawn_square: Square,
+        king_square: Square,
+        en_passant_destination: Square,
+    ) -> bool {
+        if king_square.rank() != capturing_pawn_square.rank() {
+            return false;
+        }
+
+        // Signed dist from king to capturing pawn.
+        let dx = capturing_pawn_square.as_u8() as i32 - king_square.file().as_u8() as i32;
+        let sx = dx.signum();
+
+        // March from king square to the end of the board or until we encounter an enemy rook or
+        // another piece to block the check.
+        let mut sq = king_square;
+        let enemy_rook_bitboard = board
+            .pieces()
+            .piece_bitboard(Piece::new(PieceKind::Rook, !board.color_to_move()));
+        let enemy_pawn_bitboard = board
+            .pieces()
+            .piece_bitboard(Piece::new(PieceKind::Pawn, !board.color_to_move()));
+
+        while let Some(new_sq) = sq.translated_by((sx, 0)) {
+            sq = new_sq;
+
+            if all_pieces_bitboard.contains(sq) {
+                if enemy_rook_bitboard.contains(sq) {
+                    // Pinned by this rook.
+                    return true;
+                } else if (sq == capturing_pawn_square)
+                    || (enemy_pawn_bitboard.contains(sq)
+                        && sq.file() == en_passant_destination.file())
+                {
+                    // This is the capturing pawn or the captured pawn.
+                    continue;
+                } else {
+                    // Found another piece blocking the check.
+                    return false;
+                }
+            }
+        }
+
+        false
     }
 }
 
@@ -555,13 +619,20 @@ mod tests {
     #[test]
     fn test_no_castling_without_rook() {
         // Can't castle if rooks are missing.
-        check_excludes_moves("4k3/8/8/8/8/8/8/4K3 w - - 0 1", &["e1g1", "e1c1"]);
+        check_excludes_moves("4k3/8/8/8/8/8/8/4K3 w KQ - 0 1", &["e1g1", "e1c1"]);
     }
 
     #[test]
     fn test_blocked_castling() {
         check_excludes_moves("r2bk1Br/8/8/8/8/8/8/R2BK1bR w KQ - 0 1", &["e1g1", "e1c1"]);
         check_excludes_moves("r2bk1Br/8/8/8/8/8/8/R2BK1bR b KQ - 0 1", &["e8g8", "e8c8"]);
+    }
+
+    #[test]
+    fn test_en_passant_pin() {
+        // Tricky situation where a pawn and the pawn it can capture e.p. are the only pieces
+        // blocking a horizontal check.
+        check_excludes_moves("8/8/8/K2pP2r/8/8/8/7k w - d6 0 1", &["e5d6"]);
     }
 
     #[test]

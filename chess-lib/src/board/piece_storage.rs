@@ -1,4 +1,4 @@
-use crate::board::{Color, Piece, PieceKind, bitboard::Bitboard, square::Square};
+use crate::board::{bitboard::Bitboard, square::Square, Color, Piece, PieceKind};
 use strum::IntoEnumIterator;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -55,5 +55,9 @@ impl PieceStorage {
                 .iter()
                 .map(move |s| (s, piece))
         })
+    }
+
+    pub fn piece_bitboard(&self, piece: Piece) -> Bitboard {
+        self.piece_bitboards[piece.as_u8() as usize]
     }
 }
