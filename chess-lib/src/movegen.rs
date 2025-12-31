@@ -10,7 +10,7 @@ mod sliding;
 use smallvec::SmallVec;
 
 use crate::{
-    board::{Bitboard, Board, Color, Move, Piece, PieceKind, Square},
+    board::{Bitboard, Board, BoardFile, Color, Move, Piece, PieceKind, Square},
     movegen::sliding::SlidingAttackTable,
 };
 
@@ -136,6 +136,7 @@ impl MoveGenerator {
             friendly_pieces_bitboard | enemy_pieces_bitboard,
             king_square,
         );
+        let is_check = checks_analysis.checking_pieces_mask != Bitboard::empty();
 
         for (sq, piece) in board.pieces().iter_single_color(board.color_to_move()) {
             let piece_kind = piece.kind();
@@ -185,9 +186,7 @@ impl MoveGenerator {
             // - King moves
             // - Moves that capture the checking piece
             // - Interpositions (moves that block the check)
-            if checks_analysis.checking_pieces_mask != Bitboard::empty()
-                && piece_kind != PieceKind::King
-            {
+            if is_check && piece_kind != PieceKind::King {
                 let mut valid_moves_mask = Bitboard::empty();
 
                 let checking_piece_sq = checks_analysis
@@ -246,6 +245,48 @@ impl MoveGenerator {
                     });
                 }
             }
+        }
+
+        // Consider castling.
+        let castling_rights = board.castling_rights_for_color(board.color_to_move());
+        let back_rank = board.color_to_move().back_rank();
+
+        // Squares that must be empty and safe in order to kingside castle.
+        let kingside_castle_clear_mask = Bitboard::empty()
+            .with_inserted(Square::at(BoardFile::F, back_rank))
+            .with_inserted(Square::at(BoardFile::G, back_rank));
+        // Squares that must be empty in order to queenside castle.
+        let queenside_castle_clear_mask = Bitboard::empty()
+            .with_inserted(Square::at(BoardFile::B, back_rank))
+            .with_inserted(Square::at(BoardFile::C, back_rank))
+            .with_inserted(Square::at(BoardFile::D, back_rank));
+        // Squares that must be safe in order to queenside castle.
+        let queenside_castle_danger_mask = Bitboard::empty()
+            .with_inserted(Square::at(BoardFile::C, back_rank))
+            .with_inserted(Square::at(BoardFile::D, back_rank));
+
+        if castling_rights.kingside
+            && !kingside_castle_clear_mask
+                .intersects(all_pieces_bitboard | checks_analysis.king_danger_mask)
+            && !is_check
+        {
+            self.moves.push(Move {
+                source: Square::at(BoardFile::E, back_rank),
+                destination: Square::at(BoardFile::G, back_rank),
+                promotion: None,
+            })
+        }
+
+        if castling_rights.queenside
+            && !queenside_castle_clear_mask.intersects(all_pieces_bitboard)
+            && !queenside_castle_danger_mask.intersects(checks_analysis.king_danger_mask)
+            && !is_check
+        {
+            self.moves.push(Move {
+                source: Square::at(BoardFile::E, back_rank),
+                destination: Square::at(BoardFile::C, back_rank),
+                promotion: None,
+            })
         }
 
         &self.moves
@@ -500,27 +541,27 @@ mod tests {
     #[test]
     fn test_legal_castling() {
         // White castling.
-        check_includes_moves("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1", &["e1h1", "e1a1"]);
+        check_includes_moves("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1", &["e1g1", "e1c1"]);
 
         // Black castling.
-        check_includes_moves("r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 0 1", &["e8h8", "e8a8"]);
+        check_includes_moves("r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 0 1", &["e8g8", "e8c8"]);
     }
 
     #[test]
     fn test_no_castling_through_check() {
-        check_excludes_moves("3rkr2/8/8/8/8/8/8/R3K2R w KQ - 0 1", &["e1h1", "e1a1"]);
+        check_excludes_moves("3rkr2/8/8/8/8/8/8/R3K2R w KQ - 0 1", &["e1g1", "e1c1"]);
     }
 
     #[test]
     fn test_no_castling_without_rook() {
         // Can't castle if rooks are missing.
-        check_excludes_moves("4k3/8/8/8/8/8/8/4K3 w - - 0 1", &["e1h1", "e1a1"]);
+        check_excludes_moves("4k3/8/8/8/8/8/8/4K3 w - - 0 1", &["e1g1", "e1c1"]);
     }
 
     #[test]
     fn test_blocked_castling() {
-        check_excludes_moves("r2bk1Br/8/8/8/8/8/8/R2BK1bR w KQ - 0 1", &["e1h1", "e1a1"]);
-        check_excludes_moves("r2bk1Br/8/8/8/8/8/8/R2BK1bR b KQ - 0 1", &["e8h8", "e8a8"]);
+        check_excludes_moves("r2bk1Br/8/8/8/8/8/8/R2BK1bR w KQ - 0 1", &["e1g1", "e1c1"]);
+        check_excludes_moves("r2bk1Br/8/8/8/8/8/8/R2BK1bR b KQ - 0 1", &["e8g8", "e8c8"]);
     }
 
     #[test]

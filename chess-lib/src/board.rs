@@ -240,7 +240,15 @@ impl Board {
         output
     }
 
-    fn castling_rights_of(&mut self, color: Color) -> &mut CastlingRights {
+    pub fn castling_rights_for_color(&self, color: Color) -> CastlingRights {
+        if color == Color::White {
+            self.white_castling_rights
+        } else {
+            self.black_castling_rights
+        }
+    }
+
+    fn castling_rights_for_color_mut(&mut self, color: Color) -> &mut CastlingRights {
         if color == Color::White {
             &mut self.white_castling_rights
         } else {
@@ -260,7 +268,7 @@ impl Board {
             destination: mv.destination,
             captured: destination_piece, // Changed for en passant
             old_en_passant_destination: self.en_passant_destination,
-            old_castling_rights: *self.castling_rights_of(self.color_to_move),
+            old_castling_rights: *self.castling_rights_for_color_mut(self.color_to_move),
             old_halfmoves_since_event: self.halfmoves_since_event,
         };
 
@@ -290,7 +298,7 @@ impl Board {
             }
             (PieceKind::King, _, (-2, _), _) => {
                 // Long castle
-                *self.castling_rights_of(source_piece.color()) = CastlingRights::none();
+                *self.castling_rights_for_color_mut(source_piece.color()) = CastlingRights::none();
                 self.pieces.set(mv.source, None);
                 self.pieces.set(mv.destination, Some(source_piece));
                 self.pieces
@@ -302,9 +310,11 @@ impl Board {
             }
             (PieceKind::King, _, (2, _), _) => {
                 // Short
-                *self.castling_rights_of(source_piece.color()) = CastlingRights::none();
-                self.castling_rights_of(source_piece.color()).queenside = false;
-                self.castling_rights_of(source_piece.color()).kingside = false;
+                *self.castling_rights_for_color_mut(source_piece.color()) = CastlingRights::none();
+                self.castling_rights_for_color_mut(source_piece.color())
+                    .queenside = false;
+                self.castling_rights_for_color_mut(source_piece.color())
+                    .kingside = false;
                 self.pieces.set(mv.source, None);
                 self.pieces.set(mv.destination, Some(source_piece));
                 self.pieces
@@ -357,7 +367,7 @@ impl Board {
             self.fullmoves -= 1;
         }
         self.en_passant_destination = um.old_en_passant_destination;
-        *self.castling_rights_of(self.color_to_move) = um.old_castling_rights;
+        *self.castling_rights_for_color_mut(self.color_to_move) = um.old_castling_rights;
 
         // Don't need to handle promotion or leap
         match (um.piece, um.destination.rank(), dx) {
