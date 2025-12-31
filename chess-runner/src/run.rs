@@ -1,10 +1,10 @@
-use color_print::cprintln;
+use color_print::{cformat, cprintln};
 use derive_getters::Getters;
 use derive_new::new;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use std::process::{Command, exit};
+use std::process::Command;
 use std::str::FromStr;
 use strum_macros::{Display, EnumIter, EnumString};
 
@@ -62,15 +62,16 @@ fn bot_v_bot(engine_path: PathBuf) {
     );
 
     let Ok(status) = command.status() else {
-        cprintln!("<r,bold>Failed to run fastchess</>");
-        exit(-1);
+        panic!("{}", cformat!("<r,bold>Failed to run fastchess</>"));
     };
 
     if status.success() {
         cprintln!("<g,bold>Match finished successfully!</>");
     } else {
-        cprintln!("<r,bold>fastchess exited with code: {:?}</>", status.code());
-        exit(-1);
+        panic!(
+            "{}",
+            cformat!("<r,bold>fastchess exited with code: {:?}</>", status.code())
+        );
     }
 }
 
@@ -90,15 +91,16 @@ fn compliance(engine_path: PathBuf) {
     );
 
     let Ok(status) = command.status() else {
-        cprintln!("<r,bold>Failed to run fastchess</>");
-        exit(-1);
+        panic!("{}", cformat!("<r,bold>Failed to run fastchess</>"));
     };
 
     if status.success() {
         cprintln!("<g,bold>Tool ran successfully!</>");
     } else {
-        cprintln!("<r,bold>fastchess exited with code: {:?}</>", status.code());
-        exit(-1);
+        panic!(
+            "{}",
+            cformat!("<r,bold>fastchess exited with code: {:?}</>", status.code())
+        );
     }
 }
 

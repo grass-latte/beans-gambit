@@ -1,5 +1,5 @@
-use crate::board::square::Square;
 use crate::board::PieceKind;
+use crate::board::square::Square;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Move {
@@ -41,6 +41,7 @@ impl Move {
     }
 }
 
+#[cfg(test)]
 mod tests {
     use super::*;
 

@@ -66,7 +66,7 @@ fn get_pawn_push_bitboard(color: Color, sq: Square, all_pieces_bitboard: Bitboar
     let mut result = Bitboard::empty();
 
     if let Some(push_sq) = sq.translated_by((0, up)) {
-        result = result | (Bitboard::single(push_sq) & !all_pieces_bitboard);
+        result |= Bitboard::single(push_sq) & !all_pieces_bitboard;
     }
 
     // Double push from starting rank.
@@ -79,7 +79,7 @@ fn get_pawn_push_bitboard(color: Color, sq: Square, all_pieces_bitboard: Bitboar
             unsafe { sq.unwrap_unchecked() }
         };
 
-        result = result | (Bitboard::single(thrust_sq) & !all_pieces_bitboard);
+        result |= Bitboard::single(thrust_sq) & !all_pieces_bitboard;
     }
 
     result
@@ -357,7 +357,7 @@ impl MoveGenerator {
                 ),
             };
 
-            king_danger_mask = king_danger_mask | attack_set;
+            king_danger_mask |= attack_set;
             checking_pieces_mask.insert_if(enemy_square, attack_set.contains(king_square));
         }
 
