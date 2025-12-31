@@ -200,7 +200,7 @@ mod tests {
 
     /// Try 1000 random squares and random occupancy bitboards.
     /// Check that the results from the sliding attack table match the results by naively
-    /// generateing attacks.
+    /// generating attacks.
     fn test_attack_table(
         table: SlidingAttackTable,
         ground_truth: impl Fn(Square, Bitboard) -> Bitboard,

@@ -1,4 +1,4 @@
-use crate::board::{bitboard::Bitboard, square::Square, Color, Piece, PieceKind};
+use crate::board::{Color, Piece, PieceKind, bitboard::Bitboard, square::Square};
 use strum::IntoEnumIterator;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -50,12 +50,11 @@ impl PieceStorage {
 
     pub fn iter_single_color(&self, color: Color) -> impl Iterator<Item = (Square, Piece)> {
         PieceKind::iter()
-            .map(move |kind| {
+            .flat_map(move |kind| {
                 let piece = Piece::new(kind, color);
                 self.piece_bitboards[piece.as_u8() as usize]
                     .iter()
                     .map(move |s| (s, piece))
             })
-            .flatten()
     }
 }
