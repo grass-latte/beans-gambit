@@ -41,7 +41,9 @@ impl Move {
     }
 }
 
+#[cfg(test)]
 mod tests {
+    use super::*;
 
     #[test]
     fn move_from_uci() {
