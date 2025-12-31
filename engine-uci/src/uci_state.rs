@@ -1,5 +1,4 @@
-use std::collections::{HashMap, HashSet};
-use std::sync::{OnceLock, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use std::collections::HashMap;
 use strum::IntoEnumIterator;
 use strum_macros::{AsRefStr, EnumIter};
 use vampirc_uci::UciOptionConfig;
@@ -27,9 +26,9 @@ impl UciOptions {
 
 #[derive(Debug)]
 pub struct UciState {
-    pub debug: bool,
-    command_counter: usize,
-    commands_in_progress: HashSet<usize>,
+    // pub debug: bool,
+    // command_counter: usize,
+    // commands_in_progress: HashSet<usize>,
     options: HashMap<UciOptions, String>,
 }
 
@@ -42,26 +41,26 @@ impl Default for UciState {
 impl UciState {
     pub fn new() -> UciState {
         UciState {
-            debug: false,
-            command_counter: 0,
-            commands_in_progress: HashSet::new(),
+            // debug: false,
+            // command_counter: 0,
+            // commands_in_progress: HashSet::new(),
             options: HashMap::new(),
         }
     }
 
-    pub fn start_command(&mut self) -> usize {
-        self.commands_in_progress.insert(self.command_counter);
-        self.command_counter += 1;
-        self.command_counter - 1
-    }
-
-    pub fn end_command(&mut self, command: usize) {
-        self.commands_in_progress.remove(&command);
-    }
-
-    pub fn is_ready(&self) -> bool {
-        self.commands_in_progress.is_empty()
-    }
+    // pub fn start_command(&mut self) -> usize {
+    //     self.commands_in_progress.insert(self.command_counter);
+    //     self.command_counter += 1;
+    //     self.command_counter - 1
+    // }
+    //
+    // pub fn end_command(&mut self, command: usize) {
+    //     self.commands_in_progress.remove(&command);
+    // }
+    //
+    // pub fn is_ready(&self) -> bool {
+    //     self.commands_in_progress.is_empty()
+    // }
 
     pub fn set_option<S: AsRef<str>>(&mut self, option: UciOptions, value: S) {
         self.options.insert(option, value.as_ref().to_string());
@@ -94,18 +93,18 @@ impl UciState {
     }
 }
 
-static SLOW_GLOBAL_STATE: OnceLock<RwLock<UciState>> = OnceLock::new();
-
-pub fn slow_uci_state() -> RwLockReadGuard<'static, UciState> {
-    SLOW_GLOBAL_STATE
-        .get_or_init(|| RwLock::new(UciState::new()))
-        .read()
-        .unwrap()
-}
-
-pub fn slow_uci_state_mut() -> RwLockWriteGuard<'static, UciState> {
-    SLOW_GLOBAL_STATE
-        .get_or_init(|| RwLock::new(UciState::new()))
-        .write()
-        .unwrap()
-}
+// static SLOW_GLOBAL_STATE: OnceLock<RwLock<UciState>> = OnceLock::new();
+//
+// pub fn slow_uci_state() -> RwLockReadGuard<'static, UciState> {
+//     SLOW_GLOBAL_STATE
+//         .get_or_init(|| RwLock::new(UciState::new()))
+//         .read()
+//         .unwrap()
+// }
+//
+// pub fn slow_uci_state_mut() -> RwLockWriteGuard<'static, UciState> {
+//     SLOW_GLOBAL_STATE
+//         .get_or_init(|| RwLock::new(UciState::new()))
+//         .write()
+//         .unwrap()
+// }

@@ -1,13 +1,14 @@
 use std::fmt::{Debug, Write};
 
-use derive_more::{BitAnd, BitOr, BitXor};
-use strum::IntoEnumIterator;
-
 use crate::board::{BoardFile, BoardRank};
+use derive_more::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not};
+use strum::IntoEnumIterator;
 
 use super::square::Square;
 
-#[derive(Clone, Copy, Eq, PartialEq, BitAnd, BitOr, BitXor)]
+#[derive(
+    Clone, Copy, Eq, PartialEq, BitAnd, BitOr, BitXor, Not, BitOrAssign, BitAndAssign, BitXorAssign,
+)]
 pub struct Bitboard(pub u64);
 
 impl Bitboard {
@@ -25,7 +26,7 @@ impl Bitboard {
         let mut result = 0;
 
         for (rank_index, rank) in ranks.into_iter().enumerate() {
-            result = result | ((rank as u64) << ((rank_index as u64) * 8));
+            result |= (rank as u64) << ((rank_index as u64) * 8);
         }
 
         Self(result)
@@ -77,6 +78,7 @@ impl Iterator for BitboardIterator {
         if trailing_zeros < 64 {
             self.0 &= !(1 << trailing_zeros as u64);
 
+            debug_assert!(trailing_zeros < 64);
             // SAFETY: `trailing_zeros` is less than 64.
             Some(unsafe { Square::from_u8_unchecked(trailing_zeros as u8) })
         } else {

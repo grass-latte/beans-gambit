@@ -6,18 +6,18 @@ use strum_macros::EnumIter;
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, EnumIter)]
 pub enum Piece {
-    BlackPawn = 0,
-    BlackKnight = 1,
-    BlackBishop = 2,
-    BlackRook = 3,
-    BlackQueen = 4,
-    BlackKing = 5,
-    WhitePawn = 6,
-    WhiteKnight = 7,
-    WhiteBishop = 8,
-    WhiteRook = 9,
-    WhiteQueen = 10,
-    WhiteKing = 11,
+    BlackPawn,
+    BlackKnight,
+    BlackBishop,
+    BlackRook,
+    BlackQueen,
+    BlackKing,
+    WhitePawn,
+    WhiteKnight,
+    WhiteBishop,
+    WhiteRook,
+    WhiteQueen,
+    WhiteKing,
 }
 
 impl Piece {
@@ -28,6 +28,7 @@ impl Piece {
         let kind_index = kind.as_u8();
         let color_index = color.is_white() as u8;
 
+        debug_assert!(kind_index + color_index * 6 < Piece::COUNT as u8);
         // SAFETY: Index is less than 12.
         unsafe { Self::from_u8_unchecked(kind_index + color_index * 6) }
     }
@@ -41,8 +42,11 @@ impl Piece {
         }
     }
 
+    /// # Safety
+    /// `v` must be less than 12
     pub const unsafe fn from_u8_unchecked(v: u8) -> Self {
-        // SAFETY: Self is repr(u8).
+        debug_assert!(v < Self::COUNT as u8);
+        // SAFETY: v is a valid variant representation.
         unsafe { std::mem::transmute(v) }
     }
 
@@ -56,6 +60,15 @@ impl Piece {
             PieceKind::from_char(c)?,
             Color::from_is_white(c.is_ascii_uppercase()),
         ))
+    }
+
+    pub const fn as_char(self) -> char {
+        let c = self.kind().as_char();
+        if self.color().is_white() {
+            c.to_ascii_uppercase()
+        } else {
+            c
+        }
     }
 
     pub const fn kind(self) -> PieceKind {
@@ -84,15 +97,17 @@ impl PieceKind {
 
     pub const fn from_u8(index: u8) -> Option<Self> {
         if index < Self::COUNT as u8 {
-            // SAFETY: `v` is a valid value for `Self`.
+            // SAFETY: `v` is less than 6
             Some(unsafe { Self::from_u8_unchecked(index) })
         } else {
             None
         }
     }
 
+    /// # Safety
+    /// `v` must be less than 6
     pub const unsafe fn from_u8_unchecked(v: u8) -> Self {
-        // SAFETY: Self is repr(u8).
+        debug_assert!(v < Self::COUNT as u8);
         unsafe { std::mem::transmute(v) }
     }
 
@@ -110,14 +125,14 @@ impl PieceKind {
             'b' | 'B' => Self::Bishop,
             'r' | 'R' => Self::Rook,
             'q' | 'Q' => Self::Queen,
-            'k' | 'K' => Self::Rook,
+            'k' | 'K' => Self::King,
             _ => {
                 return None;
             }
         })
     }
 
-    /// Returns the character representing this piece in English algebraic notation
+    /// Returns the character representing this piece in lowercase English algebraic notation
     pub const fn as_char(self) -> char {
         match self {
             Self::Pawn => 'p',

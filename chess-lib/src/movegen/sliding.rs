@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use strum::IntoEnumIterator;
 
-use super::precomputed_bitboards;
+use super::{precomputed_bitboards, ray_bitboard};
 use crate::board::{Bitboard, Square};
 
 /// Implements the "magic bitboards" approach to sliding piece movegen.
@@ -111,23 +111,6 @@ fn generate_bishop_attack_set(origin: Square, occupancy_bitboard: Bitboard) -> B
         .into_iter()
         .map(|offset| ray_bitboard(origin, occupancy_bitboard, offset))
         .fold(Bitboard::empty(), std::ops::BitOr::bitor)
-}
-
-fn ray_bitboard(origin: Square, occupancy_bitboard: Bitboard, offset: (i32, i32)) -> Bitboard {
-    let mut current_sq = origin;
-    let mut result = Bitboard::empty();
-    loop {
-        let Some(new_sq) = current_sq.translated_by(offset) else {
-            break;
-        };
-
-        current_sq = new_sq;
-        result.insert(current_sq);
-        if occupancy_bitboard.contains(current_sq) {
-            break;
-        }
-    }
-    result
 }
 
 #[cfg(test)]

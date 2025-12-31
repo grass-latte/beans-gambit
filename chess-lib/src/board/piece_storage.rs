@@ -7,6 +7,12 @@ pub struct PieceStorage {
     square_contents: [Option<Piece>; 64],
 }
 
+impl Default for PieceStorage {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PieceStorage {
     pub const fn new() -> Self {
         Self {
@@ -35,13 +41,11 @@ impl PieceStorage {
     }
 
     pub fn iter(&self) -> impl Iterator<Item = (Square, Piece)> {
-        Piece::iter()
-            .map(|p| {
-                self.piece_bitboards[p.as_u8() as usize]
-                    .iter()
-                    .map(move |s| (s, p))
-            })
-            .flatten()
+        Piece::iter().flat_map(|p| {
+            self.piece_bitboards[p.as_u8() as usize]
+                .iter()
+                .map(move |s| (s, p))
+        })
     }
 
     pub fn iter_single_color(&self, color: Color) -> impl Iterator<Item = (Square, Piece)> {

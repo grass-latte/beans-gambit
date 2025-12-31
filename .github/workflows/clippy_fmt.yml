@@ -1,4 +1,4 @@
-name: Rust CI
+name: Rust Fmt & Clippy
 
 on:
   push:
@@ -37,5 +37,3 @@ jobs:
       - name: Run Clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
 
-      - name: Run tests
-        run: cargo test --all
