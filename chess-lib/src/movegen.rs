@@ -7,6 +7,7 @@
 mod precomputed_bitboards;
 mod sliding;
 
+use arrayvec::ArrayVec;
 use smallvec::SmallVec;
 
 use crate::{
@@ -17,10 +18,11 @@ use crate::{
 /// The maximum number of legal moves in a reachable chess position.
 pub const MAXIMUM_LEGAL_MOVES: usize = 218;
 
+pub type MoveList = ArrayVec<Move, MAXIMUM_LEGAL_MOVES>;
+
 /// Responsible for calculating the legal moves on a `Board`.
 #[derive(Clone, Debug)]
 pub struct MoveGenerator {
-    moves: Vec<Move>,
     bishop_attack_table: SlidingAttackTable,
     rook_attack_table: SlidingAttackTable,
 }
@@ -88,16 +90,12 @@ fn get_pawn_push_bitboard(color: Color, sq: Square, all_pieces_bitboard: Bitboar
 impl MoveGenerator {
     pub fn new() -> Self {
         Self {
-            moves: Vec::with_capacity(MAXIMUM_LEGAL_MOVES),
             bishop_attack_table: SlidingAttackTable::compute_for_bishop(),
             rook_attack_table: SlidingAttackTable::compute_for_rook(),
         }
     }
 
-    /// Returns a reference to a move list stored within the move generator, to avoid allocating
-    /// between turns.
-    pub fn compute_legal_moves<'s>(&'s mut self, board: &Board) -> &'s [Move] {
-        self.moves.clear();
+    pub fn compute_legal_moves(&self, moves: &mut MoveList, board: &Board) {
         let friendly_pieces = board
             .pieces()
             .iter_single_color(board.color_to_move())
@@ -232,7 +230,7 @@ impl MoveGenerator {
                 if piece_kind == PieceKind::Pawn
                     && destination.rank() == board.color_to_move().promotion_rank()
                 {
-                    self.moves.extend(
+                    moves.extend(
                         [
                             PieceKind::Queen,
                             PieceKind::Rook,
@@ -247,7 +245,7 @@ impl MoveGenerator {
                         }),
                     );
                 } else {
-                    self.moves.push(Move {
+                    moves.push(Move {
                         source: sq,
                         destination,
                         promotion: None,
@@ -281,7 +279,7 @@ impl MoveGenerator {
             && board.pieces().get(Square::at(BoardFile::H, back_rank))
                 == Some(Piece::new(PieceKind::Rook, board.color_to_move()))
         {
-            self.moves.push(Move {
+            moves.push(Move {
                 source: Square::at(BoardFile::E, back_rank),
                 destination: Square::at(BoardFile::G, back_rank),
                 promotion: None,
@@ -295,14 +293,12 @@ impl MoveGenerator {
             && board.pieces().get(Square::at(BoardFile::A, back_rank))
                 == Some(Piece::new(PieceKind::Rook, board.color_to_move()))
         {
-            self.moves.push(Move {
+            moves.push(Move {
                 source: Square::at(BoardFile::E, back_rank),
                 destination: Square::at(BoardFile::C, back_rank),
                 promotion: None,
             })
         }
-
-        &self.moves
     }
 
     /// Returns the bitboard of squares attacked by the piece on the given square,
@@ -544,8 +540,9 @@ mod tests {
 
     fn check_includes_moves(board_fen: &str, moves_uci: &[&str]) {
         let board = Board::from_fen(board_fen).unwrap();
-        let mut mg = MoveGenerator::new();
-        let moves = mg.compute_legal_moves(&board);
+        let mg = MoveGenerator::new();
+        let mut moves = MoveList::new();
+        mg.compute_legal_moves(&mut moves, &board);
 
         for mv in moves_uci {
             if !moves.contains(&Move::from_uci(mv).unwrap()) {
@@ -560,8 +557,9 @@ mod tests {
 
     fn check_excludes_moves(board_fen: &str, moves_uci: &[&str]) {
         let board = Board::from_fen(board_fen).unwrap();
-        let mut mg = MoveGenerator::new();
-        let moves = mg.compute_legal_moves(&board);
+        let mg = MoveGenerator::new();
+        let mut moves = MoveList::new();
+        mg.compute_legal_moves(&mut moves, &board);
 
         for mv in moves_uci {
             if moves.contains(&Move::from_uci(mv).unwrap()) {
