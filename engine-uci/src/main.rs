@@ -1,20 +1,25 @@
 #![allow(dead_code)]
 #![allow(unused)]
 
+mod uci_conversions;
 mod uci_state;
 
+use crate::uci_conversions::{from_uci_move, to_uci_piece, to_uci_square};
 use crate::uci_state::{UciOptions, UciState};
 use chess_lib::board::{Board, Move};
 use chrono::Local;
+use engine::{InterMoveCache, search};
 use fern::Dispatch;
 use log::{debug, error, info, warn};
 use std::borrow::Borrow;
 use std::fs::File;
-use std::io::BufRead;
+use std::io::{BufRead, Write};
+use std::process::exit;
+use std::str::FromStr;
 use std::time::Duration;
 use std::{io, thread};
 use strum::IntoEnumIterator;
-use vampirc_uci::{UciInfoAttribute, UciMessage, parse_one};
+use vampirc_uci::{UciInfoAttribute, UciMessage, UciMove, UciPiece, UciSquare, parse_one};
 
 pub const fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
@@ -44,7 +49,7 @@ fn main() {
         .format(|out, message, record| {
             out.finish(format_args!(
                 "{} [{}] {}",
-                Local::now().format("%Y-%m-%d %H:%M:%S"),
+                Local::now().format("%Y-%m-%d %H:%M:%S.%9f"),
                 record.level(),
                 message
             ))
@@ -127,15 +132,34 @@ fn main() {
                     board = Board::from_fen(fen.unwrap().as_str()).unwrap();
                 }
                 for m in moves {
-                    todo!()
-                    // board.make_move(todo!()).unwrap();
+                    let m = from_uci_move(m);
+                    // TODO: Any move validation?
+                    board.make_move(m);
                 }
             }
             UciMessage::Go {
                 time_control,
                 search_control,
             } => {
-                todo!()
+                let mut c = InterMoveCache::new();
+                let result = search(&mut board, &mut c).unwrap();
+
+                // fastchess requires at least one info message with socre
+                send_uci(UciMessage::Info(vec![UciInfoAttribute::Score {
+                    cp: Some(0),
+                    mate: None,
+                    lower_bound: None,
+                    upper_bound: None,
+                }]));
+
+                send_uci(UciMessage::BestMove {
+                    best_move: UciMove {
+                        from: to_uci_square(result.source),
+                        to: to_uci_square(result.destination),
+                        promotion: result.promotion.map(to_uci_piece),
+                    },
+                    ponder: None,
+                });
             }
             UciMessage::Stop => {
                 todo!()
@@ -144,7 +168,8 @@ fn main() {
                 todo!()
             }
             UciMessage::Quit => {
-                todo!()
+                info!("Exiting on UCI Quit command");
+                exit(0);
             }
             UciMessage::Unknown(_, _) => {
                 warn!("Unknown UCI message: {:?}", msg);

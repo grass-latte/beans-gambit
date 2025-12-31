@@ -1,5 +1,5 @@
-use crate::board::square::Square;
 use crate::board::PieceKind;
+use crate::board::square::Square;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Move {
@@ -42,7 +42,6 @@ impl Move {
 }
 
 mod tests {
-    use super::*;
 
     #[test]
     fn move_from_uci() {

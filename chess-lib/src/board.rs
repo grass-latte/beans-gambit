@@ -13,7 +13,7 @@ pub use piece_storage::*;
 pub use square::*;
 use std::collections::HashSet;
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Board {
     pieces: PieceStorage,
     color_to_move: Color,
