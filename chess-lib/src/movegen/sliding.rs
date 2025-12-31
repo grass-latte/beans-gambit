@@ -1,7 +1,7 @@
 use itertools::Itertools;
 use strum::IntoEnumIterator;
 
-use super::precomputed_bitboards;
+use super::{precomputed_bitboards, ray_bitboard};
 use crate::board::{Bitboard, Square};
 
 /// Implements the "magic bitboards" approach to sliding piece movegen.
@@ -113,23 +113,6 @@ fn generate_bishop_attack_set(origin: Square, occupancy_bitboard: Bitboard) -> B
         .fold(Bitboard::empty(), std::ops::BitOr::bitor)
 }
 
-fn ray_bitboard(origin: Square, occupancy_bitboard: Bitboard, offset: (i32, i32)) -> Bitboard {
-    let mut current_sq = origin;
-    let mut result = Bitboard::empty();
-    loop {
-        let Some(new_sq) = current_sq.translated_by(offset) else {
-            break;
-        };
-
-        current_sq = new_sq;
-        result.insert(current_sq);
-        if occupancy_bitboard.contains(current_sq) {
-            break;
-        }
-    }
-    result
-}
-
 #[cfg(test)]
 mod tests {
     use crate::board::{BoardFile, BoardRank};
@@ -200,7 +183,7 @@ mod tests {
 
     /// Try 1000 random squares and random occupancy bitboards.
     /// Check that the results from the sliding attack table match the results by naively
-    /// generateing attacks.
+    /// generating attacks.
     fn test_attack_table(
         table: SlidingAttackTable,
         ground_truth: impl Fn(Square, Bitboard) -> Bitboard,

@@ -1,12 +1,14 @@
 use std::fmt::{Debug, Write};
 
 use crate::board::{BoardFile, BoardRank};
-use derive_more::{BitAnd, BitOr, BitXor};
+use derive_more::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not};
 use strum::IntoEnumIterator;
 
 use super::square::Square;
 
-#[derive(Clone, Copy, Eq, PartialEq, BitAnd, BitOr, BitXor)]
+#[derive(
+    Clone, Copy, Eq, PartialEq, BitAnd, BitOr, BitXor, Not, BitOrAssign, BitAndAssign, BitXorAssign,
+)]
 pub struct Bitboard(pub u64);
 
 impl Bitboard {
@@ -35,14 +37,18 @@ impl Bitboard {
         self.0 & (1 << sq.as_u8() as u64) != 0
     }
 
-    /// Sets the bit corresponding to `sq`
+    /// Sets the bit corresponding to `sq` to true.
     pub const fn insert(&mut self, sq: Square) {
         *self = self.with_inserted(sq)
     }
 
-    /// Unsets the bit corresponding to `sq`
+    /// Sets the bit corresponding to `sq` to false.
     pub const fn remove(&mut self, sq: Square) {
         *self = self.with_removed(sq)
+    }
+
+    pub const fn insert_if(&mut self, sq: Square, condition: bool) {
+        self.0 = self.0 | (Self::single(sq).0 * (condition as u64));
     }
 
     /// Returns a copy of this bitboard with `sq` set

@@ -255,6 +255,7 @@ dependencies = [
  "chess-lib",
  "derive-new",
  "log",
+ "rand",
 ]
 
 [[package]]
