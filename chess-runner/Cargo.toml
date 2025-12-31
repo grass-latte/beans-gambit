@@ -1,9 +1,9 @@
 [package]
-name = "cutechess-runner"
+name = "chess-runner"
 version = "0.1.0"
 edition = "2024"
 
-default-run = "cutechess-runner"
+default-run = "chess-runner"
 
 [dependencies]
 color-print = "0.3.7"

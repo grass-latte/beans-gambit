@@ -31,5 +31,13 @@ jobs:
             ~/.cargo/git
           key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
 
+      - name: Download and install fastchess
+        run: |
+          wget -q https://github.com/Disservin/fastchess/releases/download/v1.5.0-alpha/fastchess-linux-x86-64.tar -O fastchess.tar
+          mkdir -p fastchess-bin
+          tar -xf fastchess.tar -C fastchess-bin
+          chmod +x fastchess-bin/fastchess
+          echo "$PWD/fastchess-bin" >> $GITHUB_PATH
+
       - name: Run tests
         run: cargo test --all
