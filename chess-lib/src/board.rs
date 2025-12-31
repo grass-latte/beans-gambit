@@ -7,7 +7,6 @@ mod square;
 
 pub use bitboard::*;
 pub use color::*;
-use itertools::Itertools;
 pub use mv::*;
 pub use piece::*;
 pub use piece_storage::*;

@@ -66,7 +66,7 @@ fn get_pawn_push_bitboard(color: Color, sq: Square, all_pieces_bitboard: Bitboar
     let mut result = Bitboard::empty();
 
     if let Some(push_sq) = sq.translated_by((0, up)) {
-        result = result | (Bitboard::single(push_sq) & !all_pieces_bitboard);
+        result |= Bitboard::single(push_sq) & !all_pieces_bitboard;
     }
 
     // Double push from starting rank.
@@ -79,7 +79,7 @@ fn get_pawn_push_bitboard(color: Color, sq: Square, all_pieces_bitboard: Bitboar
             unsafe { sq.unwrap_unchecked() }
         };
 
-        result = result | (Bitboard::single(thrust_sq) & !all_pieces_bitboard);
+        result |= Bitboard::single(thrust_sq) & !all_pieces_bitboard;
     }
 
     result
@@ -96,7 +96,7 @@ impl MoveGenerator {
 
     /// Returns a reference to a move list stored within the move generator, to avoid allocating
     /// between turns.
-    pub fn compute_legal_moves<'s>(&'s mut self, board: &Board) -> &'s [Move] {
+    pub fn compute_legal_moves(&mut self, board: &Board) -> &[Move] {
         // TODO: Handle castling, en passant.
 
         self.moves.clear();
@@ -136,7 +136,7 @@ impl MoveGenerator {
                 let dx = sq.file().as_u8() as i32 - cx.king_square.file().as_u8() as i32;
                 let dy = sq.rank().as_u8() as i32 - cx.king_square.rank().as_u8() as i32;
                 let pin_ray_bitboard = ray_bitboard_empty(cx.king_square, (dx, dy));
-                move_set = move_set & pin_ray_bitboard;
+                move_set &= pin_ray_bitboard;
             }
 
             // If we are in single check, filter only for:
@@ -318,7 +318,7 @@ impl MoveGenerator {
                 if enemy_attack_set.contains(king_square)
                     && unobstructed_bishop_attacks(king_square).contains(enemy_square)
                 {
-                    diagonal_pin_rays = diagonal_pin_rays | enemy_attack_set;
+                    diagonal_pin_rays |= enemy_attack_set;
                 }
             };
 
@@ -327,7 +327,7 @@ impl MoveGenerator {
                 if enemy_attacks.contains(king_square)
                     && unobstructed_bishop_attacks(king_square).contains(enemy_square)
                 {
-                    orthogonal_pin_rays = orthogonal_pin_rays | enemy_attacks;
+                    orthogonal_pin_rays |= enemy_attacks;
                 }
             };
 
@@ -369,7 +369,7 @@ impl MoveGenerator {
                 ),
             };
 
-            king_danger_mask = king_danger_mask | attack_set;
+            king_danger_mask |= attack_set;
             checking_pieces_mask.insert_if(enemy_square, attack_set.contains(king_square));
         }
 
@@ -457,8 +457,6 @@ fn ray_bitboard_empty(origin: Square, offset: (i32, i32)) -> Bitboard {
 
 #[cfg(test)]
 mod tests {
-    use itertools::Itertools;
-
     use super::*;
     use crate::board::Board;
 

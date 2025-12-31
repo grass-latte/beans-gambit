@@ -49,12 +49,11 @@ impl PieceStorage {
     }
 
     pub fn iter_single_color(&self, color: Color) -> impl Iterator<Item = (Square, Piece)> {
-        PieceKind::iter()
-            .flat_map(move |kind| {
-                let piece = Piece::new(kind, color);
-                self.piece_bitboards[piece.as_u8() as usize]
-                    .iter()
-                    .map(move |s| (s, piece))
-            })
+        PieceKind::iter().flat_map(move |kind| {
+            let piece = Piece::new(kind, color);
+            self.piece_bitboards[piece.as_u8() as usize]
+                .iter()
+                .map(move |s| (s, piece))
+        })
     }
 }
