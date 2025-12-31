@@ -1,12 +1,14 @@
 use std::fmt::{Debug, Write};
 
 use crate::board::{BoardFile, BoardRank};
-use derive_more::{BitAnd, BitOr, BitXor};
+use derive_more::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not};
 use strum::IntoEnumIterator;
 
 use super::square::Square;
 
-#[derive(Clone, Copy, Eq, PartialEq, BitAnd, BitOr, BitXor)]
+#[derive(
+    Clone, Copy, Eq, PartialEq, BitAnd, BitOr, BitXor, Not, BitOrAssign, BitAndAssign, BitXorAssign,
+)]
 pub struct Bitboard(pub u64);
 
 impl Bitboard {
