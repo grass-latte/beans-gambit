@@ -545,7 +545,7 @@ fn ray_bitboard_empty(origin: Square, offset: (i32, i32)) -> Bitboard {
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashSet, ptr::hash};
+    use std::collections::HashSet;
 
     use itertools::Itertools;
 

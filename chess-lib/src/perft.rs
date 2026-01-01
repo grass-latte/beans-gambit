@@ -5,8 +5,6 @@
 //! We include Perft to depth 4 as unit tests, to verify the library, and higher depths as
 //! benchmarks.
 
-#![cfg(test)]
-
 use crate::{
     board::Board,
     movegen::{MoveGenerator, MoveList},
@@ -19,7 +17,7 @@ fn perft(board: &mut Board, movegen: &MoveGenerator, depth: u64) -> u64 {
     }
 
     let mut move_list = MoveList::new();
-    movegen.compute_legal_moves(&mut move_list, &board);
+    movegen.compute_legal_moves(&mut move_list, board);
 
     if depth == 1 {
         return move_list.len() as u64;

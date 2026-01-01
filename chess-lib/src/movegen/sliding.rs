@@ -188,7 +188,7 @@ mod tests {
         table: SlidingAttackTable,
         ground_truth: impl Fn(Square, Bitboard) -> Bitboard,
     ) {
-        let mut rng = rand::rng();
+        let rng = rand::rng();
         const TIMES: usize = 1000;
 
         for _ in 0..TIMES {
