@@ -182,8 +182,8 @@ impl MoveGenerator {
 
             // Handle pins.
             if checks_analysis.pinned_pieces_mask.contains(sq) {
-                let dx = sq.file().as_u8() as i32 - king_square.file().as_u8() as i32;
-                let dy = sq.rank().as_u8() as i32 - king_square.rank().as_u8() as i32;
+                let dx = (sq.file().as_u8() as i32 - king_square.file().as_u8() as i32).signum();
+                let dy = (sq.rank().as_u8() as i32 - king_square.rank().as_u8() as i32).signum();
                 let pin_ray_bitboard = ray_bitboard_empty(king_square, (dx, dy));
                 move_set = move_set & pin_ray_bitboard;
             }
@@ -212,10 +212,12 @@ impl MoveGenerator {
                 let kind = checking_piece.kind();
                 if kind == PieceKind::Bishop || kind == PieceKind::Rook || kind == PieceKind::Queen
                 {
-                    let dx =
-                        checking_piece_sq.file().as_u8() as i32 - king_square.file().as_u8() as i32;
-                    let dy =
-                        checking_piece_sq.rank().as_u8() as i32 - king_square.rank().as_u8() as i32;
+                    let dx = (checking_piece_sq.file().as_u8() as i32
+                        - king_square.file().as_u8() as i32)
+                        .signum();
+                    let dy = (checking_piece_sq.rank().as_u8() as i32
+                        - king_square.rank().as_u8() as i32)
+                        .signum();
                     let ray_bitboard = ray_bitboard_empty(king_square, (dx, dy));
                     valid_moves_mask |= ray_bitboard;
                 }
@@ -532,6 +534,8 @@ fn ray_bitboard_empty(origin: Square, offset: (i32, i32)) -> Bitboard {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use itertools::Itertools;
 
     use super::*;
@@ -568,6 +572,26 @@ mod tests {
                     moves.iter().map(Move::as_uci).collect_vec()
                 );
             }
+        }
+    }
+
+    fn check_exact_moves(board_fen: &str, moves_uci: &[&str]) {
+        let board = Board::from_fen(board_fen).unwrap();
+        let mg = MoveGenerator::new();
+        let mut moves = MoveList::new();
+        mg.compute_legal_moves(&mut moves, &board);
+
+        let expected = moves_uci
+            .iter()
+            .map(|s| s.to_string())
+            .collect::<HashSet<_>>();
+        let got = moves.iter().map(Move::as_uci).collect::<HashSet<_>>();
+
+        let unexpected = got.difference(&expected).collect_vec();
+        let missing = expected.difference(&got).collect_vec();
+
+        if expected != got {
+            panic!("incorrect moves - unexpected {unexpected:?}, missing {missing:?}");
         }
     }
 
@@ -630,6 +654,15 @@ mod tests {
         // Tricky situation where a pawn and the pawn it can capture e.p. are the only pieces
         // blocking a horizontal check.
         check_excludes_moves("8/8/8/K2pP2r/8/8/8/7k w - d6 0 1", &["e5d6"]);
+    }
+
+    #[test]
+    fn test_interpositions() {
+        // Check from bishop.
+        check_exact_moves(
+            "rnbqkbnr/ppp1pppp/8/1B1p4/4P3/8/PPPP1PPP/RNBQK1NR b KQkq - 1 2",
+            &["c7c6", "d8d7", "c8d7", "b8c6", "b8d7"],
+        );
     }
 
     #[test]

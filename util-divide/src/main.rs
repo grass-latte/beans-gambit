@@ -50,7 +50,7 @@ fn main() {
     let fen = args
         .next()
         .unwrap_or_else(|| user_error("Expected 2 arguments - FEN string and search depth."));
-    let depth: u64 = args
+    let mut depth: u64 = args
         .next()
         .unwrap_or_else(|| user_error("Expected 2 arguments - FEN string and search depth."))
         .parse()
@@ -90,5 +90,11 @@ fn main() {
         }
 
         board.make_move(next_move);
+
+        depth -= 1;
+        if depth == 0 {
+            cprintln!("<yellow>Done!</yellow>");
+            return;
+        }
     }
 }
