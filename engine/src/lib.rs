@@ -2,7 +2,7 @@
 #![allow(unused)]
 
 use chess_lib::board::{Board, Move};
-use chess_lib::movegen::MoveGenerator;
+use chess_lib::movegen::{MoveGenerator, MoveList};
 use derive_new::new;
 use rand::{Rng, rng};
 
@@ -16,6 +16,7 @@ pub struct InterMoveCache;
 pub fn search(board: &mut Board, cache: &mut InterMoveCache) -> Option<Move> {
     let mut rng = rng();
     let mut mg = MoveGenerator::new();
-    let options = mg.compute_legal_moves(board);
+    let mut options = MoveList::new();
+    mg.compute_legal_moves(&mut options, board);
     Some(options[rng.random_range(0..options.len())])
 }

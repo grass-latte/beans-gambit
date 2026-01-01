@@ -5,6 +5,9 @@ pub mod board;
 pub mod movegen;
 pub mod util;
 
+#[cfg(test)]
+mod perft;
+
 pub const fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }

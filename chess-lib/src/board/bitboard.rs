@@ -65,6 +65,10 @@ impl Bitboard {
     pub const fn iter(self) -> BitboardIterator {
         BitboardIterator(self.0)
     }
+
+    pub fn intersects(self, other: Bitboard) -> bool {
+        (self & other) != Self::empty()
+    }
 }
 
 pub struct BitboardIterator(u64);

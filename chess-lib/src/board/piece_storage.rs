@@ -56,4 +56,8 @@ impl PieceStorage {
                 .map(move |s| (s, piece))
         })
     }
+
+    pub fn piece_bitboard(&self, piece: Piece) -> Bitboard {
+        self.piece_bitboards[piece.as_u8() as usize]
+    }
 }

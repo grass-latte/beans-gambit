@@ -27,6 +27,7 @@ pub struct ChessOptions {
     setup: MatchSetup,
 }
 
+#[allow(unused)]
 fn bot_v_bot(engine_path: PathBuf) {
     let mut command = Command::new("fastchess");
     let command = command
