@@ -208,6 +208,17 @@ impl MoveGenerator {
                 // Capturing the checking piece.
                 valid_moves_mask.insert(checking_piece_sq);
 
+                // E.p. capturing checking pawn.
+                if piece.kind() == PieceKind::Pawn
+                    && checking_piece.kind() == PieceKind::Pawn
+                    && Some(checking_piece_sq)
+                        == board
+                            .en_passant_destination()
+                            .and_then(|sq| sq.translated_by((0, -board.color_to_move().up())))
+                {
+                    valid_moves_mask.insert(board.en_passant_destination().unwrap());
+                }
+
                 // Interpositions.
                 let kind = checking_piece.kind();
                 if kind == PieceKind::Bishop || kind == PieceKind::Rook || kind == PieceKind::Queen
@@ -653,10 +664,17 @@ mod tests {
     fn test_en_passant_pin() {
         // Tricky situation where a pawn and the pawn it can capture e.p. are the only pieces
         // blocking a horizontal check.
-        //check_excludes_moves("8/8/8/K2pP2r/8/8/8/7k w - d6 0 1", &["e5d6"]);
+        check_excludes_moves("8/8/8/K2pP2r/8/8/8/7k w - d6 0 1", &["e5d6"]);
 
         // Another case which util-divide found, even though we were passing the first one.
         check_excludes_moves("8/2p5/3p4/KP5r/1R2Pp1k/8/6P1/8 b - e3 0 1", &["f4e3"]);
+    }
+
+    #[test]
+    fn test_en_passant_capturing_checker() {
+        // Situation where the pawn that can be captured en passant is also checking the king -
+        // so the en passant capture is a legal move.
+        check_includes_moves("8/8/3p4/1Pp4r/1K5k/5p2/4P1P1/1R6 w - c6 0 3", &["b5c6"]);
     }
 
     #[test]
