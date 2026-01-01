@@ -218,7 +218,7 @@ impl MoveGenerator {
                     let dy = (checking_piece_sq.rank().as_u8() as i32
                         - king_square.rank().as_u8() as i32)
                         .signum();
-                    let ray_bitboard = ray_bitboard_empty(king_square, (dx, dy));
+                    let ray_bitboard = ray_bitboard(king_square, all_pieces_bitboard, (dx, dy));
                     valid_moves_mask |= ray_bitboard;
                 }
 
@@ -534,7 +534,7 @@ fn ray_bitboard_empty(origin: Square, offset: (i32, i32)) -> Bitboard {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
+    use std::{collections::HashSet, ptr::hash};
 
     use itertools::Itertools;
 
@@ -550,7 +550,7 @@ mod tests {
         for mv in moves_uci {
             if !moves.contains(&Move::from_uci(mv).unwrap()) {
                 panic!(
-                    "missing expected move {}. moves are {:?}",
+                    "missing expected move {}. got moves {:?}",
                     mv,
                     moves.iter().map(Move::as_uci).collect_vec()
                 );
@@ -567,7 +567,7 @@ mod tests {
         for mv in moves_uci {
             if moves.contains(&Move::from_uci(mv).unwrap()) {
                 panic!(
-                    "unexpected move {}. moves are {:?}",
+                    "unexpected move {}. got moves {:?}",
                     mv,
                     moves.iter().map(Move::as_uci).collect_vec()
                 );
@@ -662,6 +662,15 @@ mod tests {
         check_exact_moves(
             "rnbqkbnr/ppp1pppp/8/1B1p4/4P3/8/PPPP1PPP/RNBQK1NR b KQkq - 1 2",
             &["c7c6", "d8d7", "c8d7", "b8c6", "b8d7"],
+        );
+
+        // Check from rook.
+        check_exact_moves("3R4/k7/8/8/8/8/5PPP/r5K1 w - - 0 1", &["d8d1"]);
+
+        // A false interposition that was being included.
+        check_excludes_moves(
+            "rnbqk1nr/pppp1ppp/8/4p3/Pb1P4/8/1PP1PPPP/RNBQKBNR w KQkq - 0 1",
+            &["a4a5"],
         );
     }
 
