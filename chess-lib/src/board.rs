@@ -13,7 +13,6 @@ pub use piece_storage::*;
 pub use square::*;
 use std::collections::HashSet;
 
-use crate::board;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Board {

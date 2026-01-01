@@ -6,8 +6,8 @@
 
 use std::{
     collections::HashSet,
-    io::{Read, Write, stdin, stdout},
-    process::{ChildStdout, Command, Stdio, exit},
+    io::{stdin, stdout, Read, Write},
+    process::{exit, ChildStdout, Command, Stdio},
 };
 
 use chess_lib::{
@@ -35,7 +35,7 @@ fn read_lines_until(stdout: &mut ChildStdout, end: impl Fn(&str) -> bool) -> Vec
     let mut current_line_bytes = Vec::new();
 
     loop {
-        stdout.read(&mut next_byte).unwrap();
+        stdout.read_exact(&mut next_byte).unwrap();
 
         if next_byte[0] == '\n'.to_ascii_uppercase() as u8 {
             // Got a line.
@@ -61,7 +61,7 @@ fn perft(board: &mut Board, movegen: &MoveGenerator, depth: u64) -> u64 {
     }
 
     let mut move_list = MoveList::new();
-    movegen.compute_legal_moves(&mut move_list, &board);
+    movegen.compute_legal_moves(&mut move_list, board);
 
     if depth == 1 {
         return move_list.len() as u64;
@@ -109,8 +109,8 @@ fn divide_manual(fen: &str, depth: u64) {
             .read_line(&mut next_move)
             .expect("couldn't read stdin");
         let next_move = next_move.trim();
-        let next_move = Move::from_uci(&next_move)
-            .unwrap_or_else(|| user_error(&format!("Couldn't parse move: '{}'", &next_move)));
+        let next_move = Move::from_uci(next_move)
+            .unwrap_or_else(|| user_error(format!("Couldn't parse move: '{}'", &next_move)));
 
         if !moves.contains(&next_move) {
             user_error(format!("Illegal move: {}", next_move.as_uci()));
@@ -158,10 +158,10 @@ fn divide_auto(fen: &str, depth: u64) {
         let mut stockfish_moves = HashSet::new();
 
         stdin
-            .write(format!("position fen {}\n", board.to_fen()).as_bytes())
+            .write_all(format!("position fen {}\n", board.to_fen()).as_bytes())
             .unwrap();
         stdin
-            .write(format!("go perft {}\n", depth + 1).as_bytes())
+            .write_all(format!("go perft {}\n", depth + 1).as_bytes())
             .unwrap();
 
         for line in read_lines_until(&mut stdout, |line| line.trim().is_empty()) {
@@ -179,6 +179,7 @@ fn divide_auto(fen: &str, depth: u64) {
         }
 
         stockfish.kill().unwrap();
+        stockfish.wait().unwrap();
 
         // Compare board after each move.
         for &(mv, _) in &stockfish_moves {
@@ -197,17 +198,20 @@ fn divide_auto(fen: &str, depth: u64) {
             let mut stdout = stockfish.stdout.take().unwrap();
 
             stdin
-                .write(
+                .write_all(
                     format!("position fen {} moves {}\n", board.to_fen(), mv.as_uci()).as_bytes(),
                 )
                 .unwrap();
-            stdin.write("d\n".as_bytes()).unwrap();
+            stdin.write_all("d\n".as_bytes()).unwrap();
 
             let fen_line = read_lines_until(&mut stdout, |line| line.starts_with("Fen:"))
                 .into_iter()
                 .last()
                 .unwrap();
             let stockfish_fen = fen_line.strip_prefix("Fen: ").unwrap().trim();
+
+            stockfish.kill().unwrap();
+            stockfish.wait().unwrap();
 
             if board_fen != stockfish_fen {
                 cprintln!("<red>Disagreement on board state</red>");
@@ -217,8 +221,6 @@ fn divide_auto(fen: &str, depth: u64) {
                 cprintln!("Stockfish got <green>{stockfish_fen}</green>");
                 return;
             }
-
-            stockfish.kill().unwrap();
         }
 
         // Compare moves.

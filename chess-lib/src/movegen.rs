@@ -185,7 +185,7 @@ impl MoveGenerator {
                 let dx = (sq.file().as_u8() as i32 - king_square.file().as_u8() as i32).signum();
                 let dy = (sq.rank().as_u8() as i32 - king_square.rank().as_u8() as i32).signum();
                 let pin_ray_bitboard = ray_bitboard_empty(king_square, (dx, dy));
-                move_set = move_set & pin_ray_bitboard;
+                move_set &= pin_ray_bitboard;
             }
 
             // If we are in single check, filter only for:
