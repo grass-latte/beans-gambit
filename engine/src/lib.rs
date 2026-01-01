@@ -4,7 +4,7 @@
 use chess_lib::board::{Board, Move};
 use chess_lib::movegen::{MoveGenerator, MoveList};
 use derive_new::new;
-use rand::{rng, Rng};
+use rand::{Rng, rng};
 
 pub const fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")

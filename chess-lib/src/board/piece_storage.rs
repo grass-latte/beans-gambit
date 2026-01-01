@@ -1,4 +1,4 @@
-use crate::board::{bitboard::Bitboard, square::Square, Color, Piece, PieceKind};
+use crate::board::{Color, Piece, PieceKind, bitboard::Bitboard, square::Square};
 use strum::IntoEnumIterator;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
