@@ -443,7 +443,7 @@ impl MoveGenerator {
         }
 
         // Signed dist from king to capturing pawn.
-        let dx = capturing_pawn_square.as_u8() as i32 - king_square.file().as_u8() as i32;
+        let dx = capturing_pawn_square.file().as_u8() as i32 - king_square.file().as_u8() as i32;
         let sx = dx.signum();
 
         // March from king square to the end of the board or until we encounter an enemy rook or
@@ -653,7 +653,10 @@ mod tests {
     fn test_en_passant_pin() {
         // Tricky situation where a pawn and the pawn it can capture e.p. are the only pieces
         // blocking a horizontal check.
-        check_excludes_moves("8/8/8/K2pP2r/8/8/8/7k w - d6 0 1", &["e5d6"]);
+        //check_excludes_moves("8/8/8/K2pP2r/8/8/8/7k w - d6 0 1", &["e5d6"]);
+
+        // Another case which util-divide found, even though we were passing the first one.
+        check_excludes_moves("8/2p5/3p4/KP5r/1R2Pp1k/8/6P1/8 b - e3 0 1", &["f4e3"]);
     }
 
     #[test]

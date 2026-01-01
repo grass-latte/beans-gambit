@@ -62,3 +62,12 @@ fn test_perft_kiwipete() {
         &[48, 2039, 97_862, 4_085_603, 193_690_690],
     );
 }
+
+#[test]
+fn test_perft_position_3() {
+    test_perft(
+        "position 3",
+        "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1",
+        &[14, 191, 2812, 43_238, 674_624],
+    );
+}

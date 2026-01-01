@@ -181,7 +181,7 @@ fn divide_auto(fen: &str, depth: u64) {
         stockfish.kill().unwrap();
 
         // Compare board after each move.
-        for &(mv, _) in stockfish_moves.iter() {
+        for &(mv, _) in &stockfish_moves {
             let initial_fen = board.to_fen();
             let um = board.make_move(mv);
             let board_fen = board.to_fen();
@@ -249,6 +249,8 @@ fn divide_auto(fen: &str, depth: u64) {
             }
             return;
         }
+
+        board.make_move(mv);
     }
     cprintln!("<green>Correct.</green>");
 }
