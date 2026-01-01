@@ -7,7 +7,6 @@
 mod precomputed_bitboards;
 mod sliding;
 
-use arrayvec::ArrayVec;
 use smallvec::SmallVec;
 
 use crate::{
@@ -18,7 +17,7 @@ use crate::{
 /// The maximum number of legal moves in a reachable chess position.
 pub const MAXIMUM_LEGAL_MOVES: usize = 218;
 
-pub type MoveList = ArrayVec<Move, MAXIMUM_LEGAL_MOVES>;
+pub type MoveList = SmallVec<[Move; MAXIMUM_LEGAL_MOVES]>;
 
 /// Responsible for calculating the legal moves on a `Board`.
 #[derive(Clone, Debug)]
