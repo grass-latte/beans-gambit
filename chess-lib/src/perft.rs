@@ -45,7 +45,6 @@ fn test_perft(label: &str, fen: &str, expected_results: &[u64]) {
     }
 }
 
-/*
 #[test]
 fn perft_starting_position() {
     test_perft(
@@ -54,4 +53,3 @@ fn perft_starting_position() {
         &[20, 400, 8902, 197_281, 4_865_609],
     );
 }
-*/

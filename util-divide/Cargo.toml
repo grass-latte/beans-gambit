@@ -1,0 +1,9 @@
+[package]
+name = "util-divide"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+chess-lib = { path = "../chess-lib" }
+color-print = "0.3.7"
+itertools = "0.14.0"

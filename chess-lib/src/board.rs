@@ -257,7 +257,10 @@ impl Board {
     }
 
     pub fn make_move(&mut self, mv: Move) -> UnmakeInfo {
-        let source_piece = self.pieces.get(mv.source).unwrap();
+        let source_piece = self
+            .pieces
+            .get(mv.source)
+            .expect("There should always be a piece at the source square");
         let destination_piece = self.pieces.get(mv.destination).map(|p| p.kind());
         let dx = mv.destination.file().as_u8() as i32 - mv.source.file().as_u8() as i32;
         let dy = mv.destination.rank().as_u8() as i32 - mv.source.rank().as_u8() as i32;
@@ -343,6 +346,12 @@ impl Board {
             _ => {
                 self.pieces.set(mv.source, None);
                 self.pieces.set(mv.destination, Some(source_piece));
+
+                if source_piece.kind() == PieceKind::King {
+                    // Moving the king voids castling rights.
+                    *self.castling_rights_for_color_mut(source_piece.color()) =
+                        CastlingRights::none();
+                }
             }
         };
 
