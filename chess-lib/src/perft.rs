@@ -46,10 +46,19 @@ fn test_perft(label: &str, fen: &str, expected_results: &[u64]) {
 }
 
 #[test]
-fn perft_starting_position() {
+fn test_perft_starting_position() {
     test_perft(
         "starting position",
         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
         &[20, 400, 8902, 197_281, 4_865_609],
+    );
+}
+
+#[test]
+fn test_perft_kiwipete() {
+    test_perft(
+        "kiwipete",
+        "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+        &[48, 2039, 97_862, 4_085_603, 193_690_690],
     );
 }

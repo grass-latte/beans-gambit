@@ -2,20 +2,57 @@
 //! the move generator gets the incorrect number of moves.
 //! Prints each move from the provided position alongside the size of the sub-tree after making
 //! that move. Then prompts for the next move to make and repeats.
-//! Used as follows:
-//! `util-divide "{fen}" {depth}`
+//! Also has an "auto" mode that compares moves against Stockfish.
 
 use std::{
-    env::args,
-    io::{stdin, stdout, Write},
-    process::exit,
+    collections::HashSet,
+    io::{stdin, stdout, Read, Write},
+    process::{exit, ChildStdout, Command, Stdio},
 };
 
 use chess_lib::{
     board::{Board, Move},
     movegen::{MoveGenerator, MoveList},
 };
+use clap::Parser;
+use clap_derive::Parser;
 use color_print::{ceprintln, cprint, cprintln};
+
+#[derive(Parser)]
+#[command(version, about, long_about = Some("Utility for debugging incorrect move generation."))]
+struct Cli {
+    #[arg(long)]
+    fen: String,
+    #[arg(long)]
+    depth: u64,
+    #[arg(long)]
+    auto: bool,
+}
+
+fn read_lines_until(stdout: &mut ChildStdout, end: impl Fn(&str) -> bool) -> Vec<String> {
+    let mut lines = Vec::new();
+    let mut next_byte = [0u8];
+    let mut current_line_bytes = Vec::new();
+
+    loop {
+        stdout.read(&mut next_byte).unwrap();
+
+        if next_byte[0] == '\n'.to_ascii_uppercase() as u8 {
+            // Got a line.
+            let line = String::from_utf8(current_line_bytes.clone()).unwrap();
+
+            lines.push(line.clone());
+            current_line_bytes.clear();
+
+            if end(&line) {
+                // End.
+                return lines;
+            }
+        } else {
+            current_line_bytes.push(next_byte[0]);
+        }
+    }
+}
 
 /// Perft implemented using bulk counting.
 fn perft(board: &mut Board, movegen: &MoveGenerator, depth: u64) -> u64 {
@@ -41,26 +78,16 @@ fn perft(board: &mut Board, movegen: &MoveGenerator, depth: u64) -> u64 {
 }
 
 fn user_error(message: impl AsRef<str>) -> ! {
-    ceprintln!("<red>Error</red>: {}", message.as_ref());
+    ceprintln!("<bold><red>error:</red></bold> {}", message.as_ref());
     exit(1);
 }
 
-fn main() {
-    let mut args = args().skip(1);
-    let fen = args
-        .next()
-        .unwrap_or_else(|| user_error("Expected 2 arguments - FEN string and search depth."));
-    let mut depth: u64 = args
-        .next()
-        .unwrap_or_else(|| user_error("Expected 2 arguments - FEN string and search depth."))
-        .parse()
-        .unwrap_or_else(|_| user_error("Couldn't parse depth."));
-
-    let mut board = Board::from_fen(&fen).expect("couldn't parse fen string");
+fn divide_manual(fen: &str, depth: u64) {
+    let mut board = Board::from_fen(fen).expect("couldn't parse fen string");
     let mg = MoveGenerator::new();
     let mut moves = MoveList::new();
 
-    loop {
+    for depth in (1..depth).rev() {
         moves.clear();
         mg.compute_legal_moves(&mut moves, &board);
         moves.sort_by_key(Move::as_uci);
@@ -68,7 +95,7 @@ fn main() {
         let mut total = 0;
         for &mv in &moves {
             let um = board.make_move(mv);
-            let nodes = perft(&mut board, &mg, depth - 1);
+            let nodes = perft(&mut board, &mg, depth);
             total += nodes;
             board.unmake_last_move(um);
             cprintln!("<green>{}</green>: {}", mv.as_uci(), nodes);
@@ -90,11 +117,148 @@ fn main() {
         }
 
         board.make_move(next_move);
+    }
+}
 
-        depth -= 1;
-        if depth == 0 {
-            cprintln!("<yellow>Done!</yellow>");
+fn divide_auto(fen: &str, depth: u64) {
+    // Check that Stockfish is present.
+    let ok = Command::new("stockfish").arg("help").output().is_ok();
+    if !ok {
+        user_error("stockfish binary not found.");
+    }
+
+    let mut board = Board::from_fen(fen).expect("couldn't parse fen string");
+    let mg = MoveGenerator::new();
+    let mut moves = MoveList::new();
+
+    for depth in (0..depth).rev() {
+        moves.clear();
+        mg.compute_legal_moves(&mut moves, &board);
+        let our_moves = moves
+            .iter()
+            .copied()
+            .map(|mv| {
+                let um = board.make_move(mv);
+                let nodes = perft(&mut board, &mg, depth);
+                board.unmake_last_move(um);
+
+                (mv, nodes)
+            })
+            .collect::<HashSet<_>>();
+
+        // Consult with the fish.
+        let mut stockfish = Command::new("stockfish")
+            .stdout(Stdio::piped())
+            .stdin(Stdio::piped())
+            .spawn()
+            .expect("Stockfish failed to start.");
+
+        let mut stdin = stockfish.stdin.take().unwrap();
+        let mut stdout = stockfish.stdout.take().unwrap();
+        let mut stockfish_moves = HashSet::new();
+
+        stdin
+            .write(format!("position fen {}\n", board.to_fen()).as_bytes())
+            .unwrap();
+        stdin
+            .write(format!("go perft {}\n", depth + 1).as_bytes())
+            .unwrap();
+
+        for line in read_lines_until(&mut stdout, |line| line.trim().is_empty()) {
+            let Some((before_colon, after_colon)) = line.split_once(':') else {
+                continue;
+            };
+            let Some(mv) = Move::from_uci(before_colon) else {
+                continue;
+            };
+            let Ok(nodes) = after_colon.trim().parse::<u64>() else {
+                continue;
+            };
+
+            stockfish_moves.insert((mv, nodes));
+        }
+
+        stockfish.kill().unwrap();
+
+        // Compare board after each move.
+        for &(mv, _) in stockfish_moves.iter() {
+            let initial_fen = board.to_fen();
+            let um = board.make_move(mv);
+            let board_fen = board.to_fen();
+            board.unmake_last_move(um);
+
+            let mut stockfish = Command::new("stockfish")
+                .stdout(Stdio::piped())
+                .stdin(Stdio::piped())
+                .spawn()
+                .expect("Stockfish failed to start.");
+
+            let mut stdin = stockfish.stdin.take().unwrap();
+            let mut stdout = stockfish.stdout.take().unwrap();
+
+            stdin
+                .write(
+                    format!("position fen {} moves {}\n", board.to_fen(), mv.as_uci()).as_bytes(),
+                )
+                .unwrap();
+            stdin.write("d\n".as_bytes()).unwrap();
+
+            let fen_line = read_lines_until(&mut stdout, |line| line.starts_with("Fen:"))
+                .into_iter()
+                .last()
+                .unwrap();
+            let stockfish_fen = fen_line.strip_prefix("Fen: ").unwrap().trim();
+
+            if board_fen != stockfish_fen {
+                cprintln!("<red>Disagreement on board state</red>");
+                cprintln!("From position <green>{initial_fen}</green>");
+                cprintln!("After move <green>{}</green>", mv.as_uci());
+                cprintln!("We got <green>{board_fen}</green>");
+                cprintln!("Stockfish got <green>{stockfish_fen}</green>");
+                return;
+            }
+
+            stockfish.kill().unwrap();
+        }
+
+        // Compare moves.
+
+        if our_moves == stockfish_moves {
+            continue;
+        }
+
+        // Find the different move.
+        let &(mv, count) = stockfish_moves
+            .symmetric_difference(&our_moves)
+            .next()
+            .unwrap();
+
+        if count == 1 {
+            if stockfish_moves.contains(&(mv, count)) {
+                cprintln!(
+                    "<red>Found incorrect move</red>\nPosition <green>{}</green> Stockfish got <green>{}</green>, we didn't.",
+                    board.to_fen(),
+                    mv.as_uci()
+                );
+            } else {
+                cprintln!(
+                    "<red>Found incorrect move</red>\nPosition <green>{}</green> We got <green>{}</green>, Stockfish didn't.",
+                    board.to_fen(),
+                    mv.as_uci()
+                );
+            }
             return;
         }
+    }
+    cprintln!("<green>Correct.</green>");
+}
+
+fn main() {
+    let cli = Cli::parse();
+
+    if cli.auto {
+        divide_auto(&cli.fen, cli.depth)
+    } else {
+        divide_manual(&cli.fen, cli.depth)
     }
 }

@@ -5,5 +5,7 @@ edition = "2024"
 
 [dependencies]
 chess-lib = { path = "../chess-lib" }
+clap = "4.5.53"
+clap_derive = "4.5.49"
 color-print = "0.3.7"
 itertools = "0.14.0"

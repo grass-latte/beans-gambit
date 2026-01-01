@@ -13,6 +13,8 @@ pub use piece_storage::*;
 pub use square::*;
 use std::collections::HashSet;
 
+use crate::board;
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Board {
     pieces: PieceStorage,
@@ -328,16 +330,31 @@ impl Board {
                 );
             }
             (PieceKind::Pawn, _, (_, 2 | -2), _) => {
-                debug_assert!(((mv.destination.rank().as_u8() as i32 - (dy / 2)) as u8) < 8);
-                // SAFETY: if dy.abs() == 2, then there is a rank between the source and destination rank.
-                //     Subtracting dy / 2 from the destination rank gets that rank.
-                unsafe {
-                    self.en_passant_destination = Some(Square::at(
-                        mv.destination.file(),
-                        BoardRank::from_u8_unchecked(
-                            (mv.destination.rank().as_u8() as i32 - (dy / 2)) as u8,
-                        ),
-                    ));
+                // Seems like double pawn push doesn't actually set the e.p. target square unless
+                // an enemy pawn is there to capture it.
+                // (This doesn't actually matter but is important for FEN to be correct).
+                let enemy_pawn_bitboard = self
+                    .pieces
+                    .piece_bitboard(Piece::new(PieceKind::Pawn, !source_piece.color()));
+                if [-1, 1]
+                    .into_iter()
+                    .filter_map(|dx| {
+                        Square::translated_by(mv.destination, (dx, 0))
+                            .map(|s| enemy_pawn_bitboard.contains(s))
+                    })
+                    .any(|pawn_exists| pawn_exists)
+                {
+                    debug_assert!(((mv.destination.rank().as_u8() as i32 - (dy / 2)) as u8) < 8);
+                    // SAFETY: if dy.abs() == 2, then there is a rank between the source and destination rank.
+                    //     Subtracting dy / 2 from the destination rank gets that rank.
+                    unsafe {
+                        self.en_passant_destination = Some(Square::at(
+                            mv.destination.file(),
+                            BoardRank::from_u8_unchecked(
+                                (mv.destination.rank().as_u8() as i32 - (dy / 2)) as u8,
+                            ),
+                        ));
+                    }
                 }
 
                 self.pieces.set(mv.source, None);
@@ -347,15 +364,33 @@ impl Board {
                 self.pieces.set(mv.source, None);
                 self.pieces.set(mv.destination, Some(source_piece));
 
-                if source_piece.kind() == PieceKind::King {
-                    // Moving the king voids castling rights.
-                    *self.castling_rights_for_color_mut(source_piece.color()) =
-                        CastlingRights::none();
+                // Void castling rights if moving king or rooks.
+                match source_piece.kind() {
+                    PieceKind::King => {
+                        *self.castling_rights_for_color_mut(source_piece.color()) =
+                            CastlingRights::none();
+                    }
+                    PieceKind::Rook
+                        if mv.source
+                            == Square::at(BoardFile::H, source_piece.color().back_rank()) =>
+                    {
+                        self.castling_rights_for_color_mut(source_piece.color())
+                            .kingside = false;
+                    }
+                    PieceKind::Rook
+                        if mv.source
+                            == Square::at(BoardFile::A, source_piece.color().back_rank()) =>
+                    {
+                        self.castling_rights_for_color_mut(source_piece.color())
+                            .queenside = false;
+                    }
+                    _ => {}
                 }
             }
         };
 
-        if unmake_info.captured.is_some() {
+        self.halfmoves_since_event += 1;
+        if unmake_info.captured.is_some() || source_piece.kind() == PieceKind::Pawn {
             self.halfmoves_since_event = 0;
         }
 
@@ -515,7 +550,7 @@ mod tests {
                 destination: Square::B4,
                 promotion: None,
             },
-            "rnbqkbnr/pppppppp/8/8/1P6/8/P1PPPPPP/RNBQKBNR b KQkq b3 0 1",
+            "rnbqkbnr/pppppppp/8/8/1P6/8/P1PPPPPP/RNBQKBNR b KQkq - 0 1",
         )
     }
 
@@ -556,7 +591,7 @@ mod tests {
                 destination: Square::G1,
                 promotion: None,
             },
-            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQ1RK1 b kq - 0 1",
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQ1RK1 b kq - 1 1",
         )
     }
 
@@ -569,7 +604,7 @@ mod tests {
                 destination: Square::G8,
                 promotion: None,
             },
-            "rnbq1rk1/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQ - 0 2",
+            "rnbq1rk1/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQ - 1 2",
         )
     }
 
@@ -582,7 +617,7 @@ mod tests {
                 destination: Square::C1,
                 promotion: None,
             },
-            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/2KR1BNR b kq - 0 1",
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/2KR1BNR b kq - 1 1",
         )
     }
 
@@ -595,7 +630,7 @@ mod tests {
                 destination: Square::C8,
                 promotion: None,
             },
-            "2kr1bnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQ - 0 2",
+            "2kr1bnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQ - 1 2",
         )
     }
 

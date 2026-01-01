@@ -4,7 +4,7 @@ use strum_macros::EnumIter;
 /// Combination of piece kind and color.
 // The contained u8 is NonZero so that Option<Piece> is one byte. This requires that the type is
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, EnumIter)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, EnumIter)]
 pub enum Piece {
     BlackPawn,
     BlackKnight,
@@ -82,7 +82,7 @@ impl Piece {
 }
 
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq, EnumIter)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, EnumIter)]
 pub enum PieceKind {
     Pawn = 0,
     Knight = 1,

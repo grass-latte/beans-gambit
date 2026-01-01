@@ -1,3 +1,8 @@
 [workspace]
 resolver = "3"
 members = ["engine", "engine-uci", "chess-gui", "chess-lib", "chess-runner", "util-divide"]
+
+[profile.test]
+# Enable some optimizations in tests, so Perft goes faster.
+opt-level = 1
+
