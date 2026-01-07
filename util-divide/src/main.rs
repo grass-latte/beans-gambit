@@ -6,8 +6,8 @@
 
 use std::{
     collections::HashSet,
-    io::{stdin, stdout, Read, Write},
-    process::{exit, ChildStdout, Command, Stdio},
+    io::{Read, Write, stdin, stdout},
+    process::{ChildStdout, Command, Stdio, exit},
 };
 
 use chess_lib::movegen::compute_legal_moves;

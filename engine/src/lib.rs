@@ -2,7 +2,7 @@
 #![allow(unused)]
 
 use chess_lib::board::{Board, Move, PieceKind};
-use chess_lib::movegen::{compute_legal_moves, MoveList};
+use chess_lib::movegen::{MoveList, compute_legal_moves};
 use derive_new::new;
 use rand::rng;
 
