@@ -24,6 +24,8 @@ impl Default for BotVsBotOptions {
 pub enum MatchType {
     BotVsBot(BotVsBotOptions),
     Compliance,
+    BuildOnly,
+    BuildAndRun,
 }
 
 impl MatchType {
@@ -63,6 +65,10 @@ pub enum SimpleMatchType {
     BotVsBot,
     #[strum(serialize = "Compliance")]
     Compliance,
+    #[strum(serialize = "Build Only")]
+    BuildOnly,
+    #[strum(serialize = "Build and Run")]
+    BuildAndRun,
 }
 
 impl SimpleMatchType {
@@ -70,6 +76,8 @@ impl SimpleMatchType {
         match &self {
             SimpleMatchType::BotVsBot => 2,
             SimpleMatchType::Compliance => 1,
+            SimpleMatchType::BuildOnly => 1,
+            SimpleMatchType::BuildAndRun => 1,
         }
     }
 
@@ -77,6 +85,8 @@ impl SimpleMatchType {
         match &self {
             SimpleMatchType::BotVsBot => MatchType::setup_bot_vs_bot(),
             SimpleMatchType::Compliance => MatchType::Compliance,
+            SimpleMatchType::BuildOnly => MatchType::BuildOnly,
+            SimpleMatchType::BuildAndRun => MatchType::BuildAndRun,
         }
     }
 }

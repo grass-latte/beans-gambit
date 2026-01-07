@@ -85,5 +85,11 @@ pub fn run(options: ChessOptions, bots: Vec<ChessBot>) {
     match options.setup() {
         MatchType::Compliance => compliance(bots[0].clone()),
         MatchType::BotVsBot(options) => bot_vs_bot(bots[0].clone(), bots[1].clone(), options),
+        MatchType::BuildOnly => {
+            println!("Bot {} at {}", &bots[0].name, &bots[0].path);
+        }
+        MatchType::BuildAndRun => {
+            Command::new(&bots[0].path).status().unwrap();
+        }
     }
 }
