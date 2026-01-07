@@ -1,36 +1,58 @@
-use itertools::Itertools;
-use strum::IntoEnumIterator;
+#[rustfmt::skip]
+mod rook_attack_sets;
+#[rustfmt::skip]
+mod bishop_attack_sets;
 
 use super::{precomputed_bitboards, ray_bitboard};
 use crate::board::{Bitboard, Square};
+use crate::movegen::sliding::bishop_attack_sets::BISHOP_ATTACK_SETS;
+use crate::movegen::sliding::rook_attack_sets::ROOK_ATTACK_SETS;
 
 /// Implements the "magic bitboards" approach to sliding piece movegen.
 #[derive(Clone, Debug)]
 pub struct SlidingAttackTable {
-    attack_sets: [Vec<Bitboard>; 64],
+    attack_sets: [&'static [Bitboard]; 64],
     magics: &'static [u64; 64],
     relevant_bits: &'static [u64; 64],
     relevant_occupancy_masks: &'static [u64; 64],
 }
 
 impl SlidingAttackTable {
-    pub fn compute_for_rook() -> Self {
-        Self::compute(
-            generate_rook_attack_set,
-            &precomputed_bitboards::ROOK_MAGIC_NUMBERS,
-            &precomputed_bitboards::ROOK_RELEVANT_BITS,
-            &precomputed_bitboards::ROOK_RELEVANT_OCCUPANCY_MASKS,
-        )
+    const fn rook() -> Self {
+        Self {
+            attack_sets: ROOK_ATTACK_SETS,
+            magics: &precomputed_bitboards::ROOK_MAGIC_NUMBERS,
+            relevant_bits: &precomputed_bitboards::ROOK_RELEVANT_BITS,
+            relevant_occupancy_masks: &precomputed_bitboards::ROOK_RELEVANT_OCCUPANCY_MASKS,
+        }
     }
 
-    pub fn compute_for_bishop() -> Self {
-        Self::compute(
-            generate_bishop_attack_set,
-            &precomputed_bitboards::BISHOP_MAGIC_NUMBERS,
-            &precomputed_bitboards::BISHOP_RELEVANT_BITS,
-            &precomputed_bitboards::BISHOP_RELEVANT_OCCUPANCY_MASKS,
-        )
+    const fn bishop() -> Self {
+        Self {
+            attack_sets: BISHOP_ATTACK_SETS,
+            magics: &precomputed_bitboards::BISHOP_MAGIC_NUMBERS,
+            relevant_bits: &precomputed_bitboards::BISHOP_RELEVANT_BITS,
+            relevant_occupancy_masks: &precomputed_bitboards::BISHOP_RELEVANT_OCCUPANCY_MASKS,
+        }
     }
+
+    // fn compute_for_rook() -> Self {
+    //     Self::compute(
+    //         generate_rook_attack_set,
+    //         &precomputed_bitboards::ROOK_MAGIC_NUMBERS,
+    //         &precomputed_bitboards::ROOK_RELEVANT_BITS,
+    //         &precomputed_bitboards::ROOK_RELEVANT_OCCUPANCY_MASKS,
+    //     )
+    // }
+    //
+    // fn compute_for_bishop() -> Self {
+    //     Self::compute(
+    //         generate_bishop_attack_set,
+    //         &precomputed_bitboards::BISHOP_MAGIC_NUMBERS,
+    //         &precomputed_bitboards::BISHOP_RELEVANT_BITS,
+    //         &precomputed_bitboards::BISHOP_RELEVANT_OCCUPANCY_MASKS,
+    //     )
+    // }
 
     pub fn get_attack_set(&self, sq: Square, all_pieces_bitboard: Bitboard) -> Bitboard {
         let sq_index = sq.as_u8() as usize;
@@ -41,39 +63,39 @@ impl SlidingAttackTable {
         self.attack_sets[sq_index][key as usize]
     }
 
-    fn compute(
-        attack_set_generator: impl Fn(Square, Bitboard) -> Bitboard,
-        magics: &'static [u64; 64],
-        relevant_bits: &'static [u64; 64],
-        relevant_occupancy_masks: &'static [u64; 64],
-    ) -> Self {
-        let attack_sets = Square::iter()
-            .enumerate()
-            .map(|(sq_index, sq)| {
-                let table_size = 1 << relevant_bits[sq_index];
-                let mut attack_sets = vec![Bitboard::empty(); table_size];
-
-                for relevant_occupancy_bitboard in Self::iter_all_relevant_occupancy_bitboards(
-                    Bitboard(relevant_occupancy_masks[sq_index]),
-                ) {
-                    let key = (u64::wrapping_mul(relevant_occupancy_bitboard.0, magics[sq_index]))
-                        >> (64 - relevant_bits[sq_index]);
-
-                    attack_sets[key as usize] =
-                        attack_set_generator(sq, relevant_occupancy_bitboard);
-                }
-                attack_sets
-            })
-            .collect_array::<64>()
-            .expect("Should have exactly 64.");
-
-        Self {
-            attack_sets,
-            magics,
-            relevant_bits,
-            relevant_occupancy_masks,
-        }
-    }
+    // fn compute(
+    //     attack_set_generator: impl Fn(Square, Bitboard) -> Bitboard,
+    //     magics: &'static [u64; 64],
+    //     relevant_bits: &'static [u64; 64],
+    //     relevant_occupancy_masks: &'static [u64; 64],
+    // ) -> Self {
+    //     let attack_sets = Square::iter()
+    //         .enumerate()
+    //         .map(|(sq_index, sq)| {
+    //             let table_size = 1 << relevant_bits[sq_index];
+    //             let mut attack_sets = vec![Bitboard::empty(); table_size];
+    //
+    //             for relevant_occupancy_bitboard in Self::iter_all_relevant_occupancy_bitboards(
+    //                 Bitboard(relevant_occupancy_masks[sq_index]),
+    //             ) {
+    //                 let key = (u64::wrapping_mul(relevant_occupancy_bitboard.0, magics[sq_index]))
+    //                     >> (64 - relevant_bits[sq_index]);
+    //
+    //                 attack_sets[key as usize] =
+    //                     attack_set_generator(sq, relevant_occupancy_bitboard);
+    //             }
+    //             attack_sets
+    //         })
+    //         .collect_array::<64>()
+    //         .expect("Should have exactly 64.");
+    //
+    //     Self {
+    //         attack_sets,
+    //         magics,
+    //         relevant_bits,
+    //         relevant_occupancy_masks,
+    //     }
+    // }
 
     // Given a bitboard, returns an iterator over the bitboards for all combinations of
     // pieces occupying the marked squares.
@@ -113,11 +135,62 @@ fn generate_bishop_attack_set(origin: Square, occupancy_bitboard: Bitboard) -> B
         .fold(Bitboard::empty(), std::ops::BitOr::bitor)
 }
 
+pub const ROOK_ATTACK_TABLE: SlidingAttackTable = SlidingAttackTable::rook();
+pub const BISHOP_ATTACK_TABLE: SlidingAttackTable = SlidingAttackTable::bishop();
+
 #[cfg(test)]
 mod tests {
     use crate::board::{BoardFile, BoardRank};
 
     use super::*;
+
+    // #[test]
+    // fn generate() {
+    //     for (name, sat) in [
+    //         ("rook_attack_set", SlidingAttackTable::compute_for_rook()),
+    //         (
+    //             "bishop_attack_set",
+    //             SlidingAttackTable::compute_for_bishop(),
+    //         ),
+    //     ] {
+    //         let name_caps = name.to_uppercase();
+    //         let name_plural = name.to_string() + "s";
+    //         let name_plural_caps = name_plural.to_uppercase();
+    //         let mut s = String::new();
+    //         s += "use crate::board::Bitboard;\n\n";
+    //
+    //         for (i, vb) in sat.attack_sets.iter().enumerate() {
+    //             s += &format!(
+    //                 "#[rustfmt::skip]\nconst {name_caps}_{i}: [u64; {}] = [\n",
+    //                 vb.len()
+    //             );
+    //             for (j, b) in vb.iter().enumerate() {
+    //                 if j % 8 == 0 {
+    //                     s += "        ";
+    //                 }
+    //                 s += &format!("{}, ", b.0);
+    //                 if j % 8 == 7 {
+    //                     s += "\n";
+    //                 }
+    //             }
+    //             s += "];\n";
+    //             s += &format!("const {name_caps}_{i}_LEN: usize = {name_caps}_{i}.len();\n\n");
+    //         }
+    //
+    //         s += "// SAFETY: Bitboard is internally represented as u64\n";
+    //         s += &format!(
+    //             "pub const {name_plural_caps}: [&[Bitboard]; {}] = [\n",
+    //             sat.attack_sets.len()
+    //         );
+    //         for i in 0..sat.attack_sets.len() {
+    //             s += &format!(
+    //                 "    unsafe {{ &std::mem::transmute::<[u64; {name_caps}_{i}_LEN], [Bitboard; {name_caps}_{i}_LEN]>({name_caps}_{i}) }},\n"
+    //             );
+    //         }
+    //         s += "];\n";
+    //         fs::write(format!("src/movegen/sliding/{name_plural}.rs"), s).unwrap();
+    //     }
+    // }
 
     #[test]
     fn test_generate_rook_attacks() {
@@ -225,17 +298,11 @@ mod tests {
 
     #[test]
     fn test_rook_attack_table() {
-        test_attack_table(
-            SlidingAttackTable::compute_for_rook(),
-            generate_rook_attack_set,
-        );
+        test_attack_table(ROOK_ATTACK_TABLE, generate_rook_attack_set);
     }
 
     #[test]
     fn test_bishop_attack_table() {
-        test_attack_table(
-            SlidingAttackTable::compute_for_bishop(),
-            generate_bishop_attack_set,
-        );
+        test_attack_table(BISHOP_ATTACK_TABLE, generate_bishop_attack_set);
     }
 }

@@ -5,19 +5,17 @@
 //! We include Perft to depth 4 as unit tests, to verify the library, and higher depths as
 //! benchmarks.
 
-use crate::{
-    board::Board,
-    movegen::{MoveGenerator, MoveList},
-};
+use crate::movegen::compute_legal_moves;
+use crate::{board::Board, movegen::MoveList};
 
 /// Perft implemented using bulk counting.
-fn perft(board: &mut Board, movegen: &MoveGenerator, depth: u64) -> u64 {
+fn perft(board: &mut Board, depth: u64) -> u64 {
     if depth == 0 {
         return 1;
     }
 
     let mut move_list = MoveList::new();
-    movegen.compute_legal_moves(&mut move_list, board);
+    compute_legal_moves(&mut move_list, board);
 
     if depth == 1 {
         return move_list.len() as u64;
@@ -26,7 +24,7 @@ fn perft(board: &mut Board, movegen: &MoveGenerator, depth: u64) -> u64 {
     let mut nodes: u64 = 0;
     for &mv in move_list.iter() {
         let unmake = board.make_move(mv);
-        nodes += perft(board, movegen, depth - 1);
+        nodes += perft(board, depth - 1);
         board.unmake_last_move(unmake);
     }
 
@@ -35,10 +33,9 @@ fn perft(board: &mut Board, movegen: &MoveGenerator, depth: u64) -> u64 {
 
 /// Compare perft against expected results.
 fn test_perft(label: &str, fen: &str, expected_results: &[u64]) {
-    let mg = MoveGenerator::new();
     for (depth, &expected_result) in (1..).zip(expected_results) {
         let mut board = Board::from_fen(fen).unwrap();
-        let result = perft(&mut board, &mg, depth);
+        let result = perft(&mut board, depth);
         assert_eq!(result, expected_result, "perft {label} depth {depth}");
     }
 }

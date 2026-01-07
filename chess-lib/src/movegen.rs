@@ -9,22 +9,20 @@ mod sliding;
 
 use smallvec::SmallVec;
 
-use crate::{
-    board::{Bitboard, Board, BoardFile, Color, Move, Piece, PieceKind, Square},
-    movegen::sliding::SlidingAttackTable,
-};
+use crate::board::{Bitboard, Board, BoardFile, Color, Move, Piece, PieceKind, Square};
+use crate::movegen::sliding::{BISHOP_ATTACK_TABLE, ROOK_ATTACK_TABLE};
 
 /// The maximum number of legal moves in a reachable chess position.
 pub const MAXIMUM_LEGAL_MOVES: usize = 218;
 
 pub type MoveList = SmallVec<[Move; MAXIMUM_LEGAL_MOVES]>;
 
-/// Responsible for calculating the legal moves on a `Board`.
-#[derive(Clone, Debug)]
-pub struct MoveGenerator {
-    bishop_attack_table: SlidingAttackTable,
-    rook_attack_table: SlidingAttackTable,
-}
+// /// Responsible for calculating the legal moves on a `Board`.
+// #[derive(Clone, Debug)]
+// pub struct MoveGenerator {
+//     bishop_attack_table: SlidingAttackTable,
+//     rook_attack_table: SlidingAttackTable,
+// }
 
 /// Returns the bitboard of squares attacked by a white pawn on the given square.
 pub fn white_pawn_attacks(sq: Square) -> Bitboard {
@@ -86,416 +84,398 @@ fn get_pawn_push_bitboard(color: Color, sq: Square, all_pieces_bitboard: Bitboar
     result
 }
 
-impl MoveGenerator {
-    pub fn new() -> Self {
-        Self {
-            bishop_attack_table: SlidingAttackTable::compute_for_bishop(),
-            rook_attack_table: SlidingAttackTable::compute_for_rook(),
+// impl MoveGenerator {
+//     pub const fn new() -> Self {
+//         Self {
+//             bishop_attack_table: SlidingAttackTable::bishop(),
+//             rook_attack_table: SlidingAttackTable::rook(),
+//         }
+//     }
+
+pub fn compute_legal_moves(moves: &mut MoveList, board: &Board) {
+    let friendly_pieces = board
+        .pieces()
+        .iter_single_color(board.color_to_move())
+        .collect::<PieceVec>();
+
+    let enemy_pieces = board
+        .pieces()
+        .iter_single_color(!board.color_to_move())
+        .collect::<PieceVec>();
+
+    let friendly_pieces_bitboard = friendly_pieces
+        .iter()
+        .copied()
+        .fold(Bitboard::empty(), |bitboard, (sq, _)| {
+            bitboard | Bitboard::single(sq)
+        });
+
+    let enemy_pieces_bitboard = enemy_pieces
+        .iter()
+        .copied()
+        .fold(Bitboard::empty(), |bitboard, (sq, _)| {
+            bitboard | Bitboard::single(sq)
+        });
+
+    let all_pieces_bitboard = friendly_pieces_bitboard | enemy_pieces_bitboard;
+
+    let king_square = friendly_pieces
+        .iter()
+        .copied()
+        .find(|&(_, piece)| piece == Piece::WhiteKing || piece == Piece::BlackKing)
+        .map(|(sq, _)| sq)
+        .expect("There must be a king.");
+
+    let checks_analysis = analyse_checks(
+        &enemy_pieces,
+        friendly_pieces_bitboard | enemy_pieces_bitboard,
+        king_square,
+    );
+    let is_check = checks_analysis.checking_pieces_mask != Bitboard::empty();
+
+    for (sq, piece) in board.pieces().iter_single_color(board.color_to_move()) {
+        let piece_kind = piece.kind();
+
+        // If we are in double check, filter only for king moves.
+        if piece_kind != PieceKind::King && checks_analysis.checking_pieces_mask.0.count_ones() > 1
+        {
+            continue;
         }
-    }
 
-    pub fn compute_legal_moves(&self, moves: &mut MoveList, board: &Board) {
-        let friendly_pieces = board
-            .pieces()
-            .iter_single_color(board.color_to_move())
-            .collect::<PieceVec>();
-
-        let enemy_pieces = board
-            .pieces()
-            .iter_single_color(!board.color_to_move())
-            .collect::<PieceVec>();
-
-        let friendly_pieces_bitboard = friendly_pieces
-            .iter()
-            .copied()
-            .fold(Bitboard::empty(), |bitboard, (sq, _)| {
-                bitboard | Bitboard::single(sq)
-            });
-
-        let enemy_pieces_bitboard = enemy_pieces
-            .iter()
-            .copied()
-            .fold(Bitboard::empty(), |bitboard, (sq, _)| {
-                bitboard | Bitboard::single(sq)
-            });
-
-        let all_pieces_bitboard = friendly_pieces_bitboard | enemy_pieces_bitboard;
-
-        let king_square = friendly_pieces
-            .iter()
-            .copied()
-            .find(|&(_, piece)| piece == Piece::WhiteKing || piece == Piece::BlackKing)
-            .map(|(sq, _)| sq)
-            .expect("There must be a king.");
-
-        let checks_analysis = self.analyse_checks(
-            &enemy_pieces,
-            friendly_pieces_bitboard | enemy_pieces_bitboard,
-            king_square,
-        );
-        let is_check = checks_analysis.checking_pieces_mask != Bitboard::empty();
-
-        for (sq, piece) in board.pieces().iter_single_color(board.color_to_move()) {
-            let piece_kind = piece.kind();
-
-            // If we are in double check, filter only for king moves.
-            if piece_kind != PieceKind::King
-                && checks_analysis.checking_pieces_mask.0.count_ones() > 1
-            {
-                continue;
-            }
-
-            // Bitboard of pseudolegal moves - will be refined to legal moves.
-            let mut move_set = if piece_kind == PieceKind::Pawn {
-                let attacks = match board.color_to_move() {
-                    Color::White => white_pawn_attacks(sq),
-                    Color::Black => black_pawn_attacks(sq),
-                };
-                let pushes = get_pawn_push_bitboard(board.color_to_move(), sq, all_pieces_bitboard);
-
-                // Enemy pieces and en passant target.
-                let valid_capture_destinations = enemy_pieces_bitboard
-                    | board
-                        .en_passant_destination()
-                        .filter(|&en_passant_destination| {
-                            !self.detect_en_passant_pin(
-                                board,
-                                all_pieces_bitboard,
-                                sq,
-                                king_square,
-                                en_passant_destination,
-                            )
-                        })
-                        .map(Bitboard::single)
-                        .unwrap_or(Bitboard::empty());
-
-                pushes | (attacks & valid_capture_destinations)
-            } else {
-                self.get_pseudolegal_attacks_bitboard(piece, sq, all_pieces_bitboard)
+        // Bitboard of pseudolegal moves - will be refined to legal moves.
+        let mut move_set = if piece_kind == PieceKind::Pawn {
+            let attacks = match board.color_to_move() {
+                Color::White => white_pawn_attacks(sq),
+                Color::Black => black_pawn_attacks(sq),
             };
-            move_set &= !friendly_pieces_bitboard;
+            let pushes = get_pawn_push_bitboard(board.color_to_move(), sq, all_pieces_bitboard);
 
-            // Prevent the king from stepping into check.
-            if piece_kind == PieceKind::King {
-                move_set &= !checks_analysis.king_danger_mask;
+            // Enemy pieces and en passant target.
+            let valid_capture_destinations = enemy_pieces_bitboard
+                | board
+                    .en_passant_destination()
+                    .filter(|&en_passant_destination| {
+                        !detect_en_passant_pin(
+                            board,
+                            all_pieces_bitboard,
+                            sq,
+                            king_square,
+                            en_passant_destination,
+                        )
+                    })
+                    .map(Bitboard::single)
+                    .unwrap_or(Bitboard::empty());
+
+            pushes | (attacks & valid_capture_destinations)
+        } else {
+            get_pseudolegal_attacks_bitboard(piece, sq, all_pieces_bitboard)
+        };
+        move_set &= !friendly_pieces_bitboard;
+
+        // Prevent the king from stepping into check.
+        if piece_kind == PieceKind::King {
+            move_set &= !checks_analysis.king_danger_mask;
+        }
+
+        // Handle pins.
+        if checks_analysis.pinned_pieces_mask.contains(sq) {
+            let dx = (sq.file().as_u8() as i32 - king_square.file().as_u8() as i32).signum();
+            let dy = (sq.rank().as_u8() as i32 - king_square.rank().as_u8() as i32).signum();
+            let pin_ray_bitboard = ray_bitboard_empty(king_square, (dx, dy));
+            move_set &= pin_ray_bitboard;
+        }
+
+        // If we are in single check, filter only for:
+        // - King moves
+        // - Moves that capture the checking piece
+        // - Interpositions (moves that block the check)
+        if is_check && piece_kind != PieceKind::King {
+            let mut valid_moves_mask = Bitboard::empty();
+
+            let checking_piece_sq = checks_analysis
+                .checking_pieces_mask
+                .iter()
+                .next()
+                .expect("There should be one checking piece.");
+            let checking_piece = board
+                .pieces()
+                .get(checking_piece_sq)
+                .expect("There should be a piece on this square.");
+
+            // Capturing the checking piece.
+            valid_moves_mask.insert(checking_piece_sq);
+
+            // E.p. capturing checking pawn.
+            if piece.kind() == PieceKind::Pawn
+                && checking_piece.kind() == PieceKind::Pawn
+                && Some(checking_piece_sq)
+                    == board
+                        .en_passant_destination()
+                        .and_then(|sq| sq.translated_by((0, -board.color_to_move().up())))
+            {
+                valid_moves_mask.insert(board.en_passant_destination().unwrap());
             }
 
-            // Handle pins.
-            if checks_analysis.pinned_pieces_mask.contains(sq) {
-                let dx = (sq.file().as_u8() as i32 - king_square.file().as_u8() as i32).signum();
-                let dy = (sq.rank().as_u8() as i32 - king_square.rank().as_u8() as i32).signum();
-                let pin_ray_bitboard = ray_bitboard_empty(king_square, (dx, dy));
-                move_set &= pin_ray_bitboard;
+            // Interpositions.
+            let kind = checking_piece.kind();
+            if kind == PieceKind::Bishop || kind == PieceKind::Rook || kind == PieceKind::Queen {
+                let dx = (checking_piece_sq.file().as_u8() as i32
+                    - king_square.file().as_u8() as i32)
+                    .signum();
+                let dy = (checking_piece_sq.rank().as_u8() as i32
+                    - king_square.rank().as_u8() as i32)
+                    .signum();
+                let ray_bitboard = ray_bitboard(king_square, all_pieces_bitboard, (dx, dy));
+                valid_moves_mask |= ray_bitboard;
             }
 
-            // If we are in single check, filter only for:
-            // - King moves
-            // - Moves that capture the checking piece
-            // - Interpositions (moves that block the check)
-            if is_check && piece_kind != PieceKind::King {
-                let mut valid_moves_mask = Bitboard::empty();
+            move_set &= valid_moves_mask;
+        }
 
-                let checking_piece_sq = checks_analysis
-                    .checking_pieces_mask
-                    .iter()
-                    .next()
-                    .expect("There should be one checking piece.");
-                let checking_piece = board
-                    .pieces()
-                    .get(checking_piece_sq)
-                    .expect("There should be a piece on this square.");
-
-                // Capturing the checking piece.
-                valid_moves_mask.insert(checking_piece_sq);
-
-                // E.p. capturing checking pawn.
-                if piece.kind() == PieceKind::Pawn
-                    && checking_piece.kind() == PieceKind::Pawn
-                    && Some(checking_piece_sq)
-                        == board
-                            .en_passant_destination()
-                            .and_then(|sq| sq.translated_by((0, -board.color_to_move().up())))
-                {
-                    valid_moves_mask.insert(board.en_passant_destination().unwrap());
-                }
-
-                // Interpositions.
-                let kind = checking_piece.kind();
-                if kind == PieceKind::Bishop || kind == PieceKind::Rook || kind == PieceKind::Queen
-                {
-                    let dx = (checking_piece_sq.file().as_u8() as i32
-                        - king_square.file().as_u8() as i32)
-                        .signum();
-                    let dy = (checking_piece_sq.rank().as_u8() as i32
-                        - king_square.rank().as_u8() as i32)
-                        .signum();
-                    let ray_bitboard = ray_bitboard(king_square, all_pieces_bitboard, (dx, dy));
-                    valid_moves_mask |= ray_bitboard;
-                }
-
-                move_set &= valid_moves_mask;
-            }
-
-            // Add the moves in the move set to the move list.
-            for destination in move_set.iter() {
-                // Handle promotions.
-                if piece_kind == PieceKind::Pawn
-                    && destination.rank() == board.color_to_move().promotion_rank()
-                {
-                    moves.extend(
-                        [
-                            PieceKind::Queen,
-                            PieceKind::Rook,
-                            PieceKind::Knight,
-                            PieceKind::Bishop,
-                        ]
-                        .into_iter()
-                        .map(|promotion| Move {
-                            source: sq,
-                            destination,
-                            promotion: Some(promotion),
-                        }),
-                    );
-                } else {
-                    moves.push(Move {
+        // Add the moves in the move set to the move list.
+        for destination in move_set.iter() {
+            // Handle promotions.
+            if piece_kind == PieceKind::Pawn
+                && destination.rank() == board.color_to_move().promotion_rank()
+            {
+                moves.extend(
+                    [
+                        PieceKind::Queen,
+                        PieceKind::Rook,
+                        PieceKind::Knight,
+                        PieceKind::Bishop,
+                    ]
+                    .into_iter()
+                    .map(|promotion| Move {
                         source: sq,
                         destination,
-                        promotion: None,
-                    });
-                }
+                        promotion: Some(promotion),
+                    }),
+                );
+            } else {
+                moves.push(Move {
+                    source: sq,
+                    destination,
+                    promotion: None,
+                });
             }
-        }
-
-        // Consider castling.
-        let castling_rights = board.castling_rights_for_color(board.color_to_move());
-        let back_rank = board.color_to_move().back_rank();
-
-        // Squares that must be empty and safe in order to kingside castle.
-        let kingside_castle_clear_mask = Bitboard::empty()
-            .with_inserted(Square::at(BoardFile::F, back_rank))
-            .with_inserted(Square::at(BoardFile::G, back_rank));
-        // Squares that must be empty in order to queenside castle.
-        let queenside_castle_clear_mask = Bitboard::empty()
-            .with_inserted(Square::at(BoardFile::B, back_rank))
-            .with_inserted(Square::at(BoardFile::C, back_rank))
-            .with_inserted(Square::at(BoardFile::D, back_rank));
-        // Squares that must be safe in order to queenside castle.
-        let queenside_castle_danger_mask = Bitboard::empty()
-            .with_inserted(Square::at(BoardFile::C, back_rank))
-            .with_inserted(Square::at(BoardFile::D, back_rank));
-
-        if castling_rights.kingside
-            && !kingside_castle_clear_mask
-                .intersects(all_pieces_bitboard | checks_analysis.king_danger_mask)
-            && !is_check
-            && board.pieces().get(Square::at(BoardFile::H, back_rank))
-                == Some(Piece::new(PieceKind::Rook, board.color_to_move()))
-        {
-            moves.push(Move {
-                source: Square::at(BoardFile::E, back_rank),
-                destination: Square::at(BoardFile::G, back_rank),
-                promotion: None,
-            })
-        }
-
-        if castling_rights.queenside
-            && !queenside_castle_clear_mask.intersects(all_pieces_bitboard)
-            && !queenside_castle_danger_mask.intersects(checks_analysis.king_danger_mask)
-            && !is_check
-            && board.pieces().get(Square::at(BoardFile::A, back_rank))
-                == Some(Piece::new(PieceKind::Rook, board.color_to_move()))
-        {
-            moves.push(Move {
-                source: Square::at(BoardFile::E, back_rank),
-                destination: Square::at(BoardFile::C, back_rank),
-                promotion: None,
-            })
         }
     }
 
-    /// Returns the bitboard of squares attacked by the piece on the given square,
-    /// if king safety is ignored.
-    fn get_pseudolegal_attacks_bitboard(
-        &self,
-        piece: Piece,
-        sq: Square,
-        all_pieces_bitboard: Bitboard,
-    ) -> Bitboard {
-        match piece {
-            Piece::WhitePawn => white_pawn_attacks(sq),
-            Piece::BlackPawn => black_pawn_attacks(sq),
-            Piece::WhiteKnight | Piece::BlackKnight => knight_attacks(sq),
-            Piece::WhiteKing | Piece::BlackKing => king_attacks(sq),
-            Piece::WhiteBishop | Piece::BlackBishop => self
-                .bishop_attack_table
-                .get_attack_set(sq, all_pieces_bitboard),
-            Piece::WhiteRook | Piece::BlackRook => self
-                .rook_attack_table
-                .get_attack_set(sq, all_pieces_bitboard),
+    // Consider castling.
+    let castling_rights = board.castling_rights_for_color(board.color_to_move());
+    let back_rank = board.color_to_move().back_rank();
+
+    // Squares that must be empty and safe in order to kingside castle.
+    let kingside_castle_clear_mask = Bitboard::empty()
+        .with_inserted(Square::at(BoardFile::F, back_rank))
+        .with_inserted(Square::at(BoardFile::G, back_rank));
+    // Squares that must be empty in order to queenside castle.
+    let queenside_castle_clear_mask = Bitboard::empty()
+        .with_inserted(Square::at(BoardFile::B, back_rank))
+        .with_inserted(Square::at(BoardFile::C, back_rank))
+        .with_inserted(Square::at(BoardFile::D, back_rank));
+    // Squares that must be safe in order to queenside castle.
+    let queenside_castle_danger_mask = Bitboard::empty()
+        .with_inserted(Square::at(BoardFile::C, back_rank))
+        .with_inserted(Square::at(BoardFile::D, back_rank));
+
+    if castling_rights.kingside
+        && !kingside_castle_clear_mask
+            .intersects(all_pieces_bitboard | checks_analysis.king_danger_mask)
+        && !is_check
+        && board.pieces().get(Square::at(BoardFile::H, back_rank))
+            == Some(Piece::new(PieceKind::Rook, board.color_to_move()))
+    {
+        moves.push(Move {
+            source: Square::at(BoardFile::E, back_rank),
+            destination: Square::at(BoardFile::G, back_rank),
+            promotion: None,
+        })
+    }
+
+    if castling_rights.queenside
+        && !queenside_castle_clear_mask.intersects(all_pieces_bitboard)
+        && !queenside_castle_danger_mask.intersects(checks_analysis.king_danger_mask)
+        && !is_check
+        && board.pieces().get(Square::at(BoardFile::A, back_rank))
+            == Some(Piece::new(PieceKind::Rook, board.color_to_move()))
+    {
+        moves.push(Move {
+            source: Square::at(BoardFile::E, back_rank),
+            destination: Square::at(BoardFile::C, back_rank),
+            promotion: None,
+        })
+    }
+}
+
+/// Returns the bitboard of squares attacked by the piece on the given square,
+/// if king safety is ignored.
+fn get_pseudolegal_attacks_bitboard(
+    piece: Piece,
+    sq: Square,
+    all_pieces_bitboard: Bitboard,
+) -> Bitboard {
+    match piece {
+        Piece::WhitePawn => white_pawn_attacks(sq),
+        Piece::BlackPawn => black_pawn_attacks(sq),
+        Piece::WhiteKnight | Piece::BlackKnight => knight_attacks(sq),
+        Piece::WhiteKing | Piece::BlackKing => king_attacks(sq),
+        Piece::WhiteBishop | Piece::BlackBishop => {
+            BISHOP_ATTACK_TABLE.get_attack_set(sq, all_pieces_bitboard)
+        }
+        Piece::WhiteRook | Piece::BlackRook => {
+            ROOK_ATTACK_TABLE.get_attack_set(sq, all_pieces_bitboard)
+        }
+        Piece::WhiteQueen | Piece::BlackQueen => {
+            let rook_attacks = ROOK_ATTACK_TABLE.get_attack_set(sq, all_pieces_bitboard);
+            let bishop_attacks = BISHOP_ATTACK_TABLE.get_attack_set(sq, all_pieces_bitboard);
+            rook_attacks | bishop_attacks
+        }
+    }
+}
+
+/// Calculates:
+///  - The bitboard of squares on which the king would be placed in check.
+///    This is the set of squares attacked by enemy pieces, with the king excluded as
+///    a blocker.
+///  - The bitboard of squares containing pieces that are checking the king.
+///  - The bitboard of squares containing pieces that are pinned to the king.
+fn analyse_checks(
+    enemy_pieces: &[(Square, Piece)],
+    all_pieces_bitboard: Bitboard,
+    king_square: Square,
+) -> ChecksAnalysis {
+    let all_pieces_except_king_bitboard = all_pieces_bitboard.with_removed(king_square);
+    let mut king_danger_mask = Bitboard::empty();
+    let mut checking_pieces_mask = Bitboard::empty();
+
+    // Approach for detecting pinned piece locations:
+    // A piece is pinned if it is attacked by an enemy rook/bishop and both the
+    // pinned piece and the pinning piece would be attacked by our king if it were
+    // an enemy rook/bishop.
+    let mut orthogonal_pin_rays = Bitboard::empty();
+    let mut diagonal_pin_rays = Bitboard::empty();
+
+    let mut update_diagonal_pin_rays =
+        |enemy_attack_set: Bitboard, enemy_square: Square, king_square: Square| {
+            if unobstructed_bishop_attacks(king_square).contains(enemy_square) {
+                diagonal_pin_rays |= enemy_attack_set;
+            }
+        };
+
+    let mut update_orthogonal_pin_rays =
+        |enemy_attacks: Bitboard, enemy_square: Square, king_square: Square| {
+            if unobstructed_rook_attacks(king_square).contains(enemy_square) {
+                orthogonal_pin_rays |= enemy_attacks;
+            }
+        };
+
+    for &(enemy_square, enemy_piece) in enemy_pieces {
+        let attack_set = match enemy_piece {
+            Piece::WhiteRook | Piece::BlackRook => {
+                let attacks =
+                    ROOK_ATTACK_TABLE.get_attack_set(enemy_square, all_pieces_except_king_bitboard);
+
+                update_orthogonal_pin_rays(attacks, enemy_square, king_square);
+                attacks
+            }
+            Piece::WhiteBishop | Piece::BlackBishop => {
+                let attacks = BISHOP_ATTACK_TABLE
+                    .get_attack_set(enemy_square, all_pieces_except_king_bitboard);
+
+                update_diagonal_pin_rays(attacks, enemy_square, king_square);
+                attacks
+            }
             Piece::WhiteQueen | Piece::BlackQueen => {
-                let rook_attacks = self
-                    .rook_attack_table
-                    .get_attack_set(sq, all_pieces_bitboard);
-                let bishop_attacks = self
-                    .bishop_attack_table
-                    .get_attack_set(sq, all_pieces_bitboard);
-                rook_attacks | bishop_attacks
+                let orthogonal_attacks =
+                    ROOK_ATTACK_TABLE.get_attack_set(enemy_square, all_pieces_except_king_bitboard);
+                let diagonal_attacks = BISHOP_ATTACK_TABLE
+                    .get_attack_set(enemy_square, all_pieces_except_king_bitboard);
+
+                update_diagonal_pin_rays(diagonal_attacks, enemy_square, king_square);
+                update_orthogonal_pin_rays(orthogonal_attacks, enemy_square, king_square);
+
+                orthogonal_attacks | diagonal_attacks
+            }
+            _ => get_pseudolegal_attacks_bitboard(
+                enemy_piece,
+                enemy_square,
+                all_pieces_except_king_bitboard,
+            ),
+        };
+
+        king_danger_mask |= attack_set;
+        checking_pieces_mask.insert_if(enemy_square, attack_set.contains(king_square));
+    }
+
+    let orthogonal_pin_mask =
+        ROOK_ATTACK_TABLE.get_attack_set(king_square, all_pieces_bitboard) & orthogonal_pin_rays;
+    let diagonal_pin_mask =
+        BISHOP_ATTACK_TABLE.get_attack_set(king_square, all_pieces_bitboard) & diagonal_pin_rays;
+
+    ChecksAnalysis {
+        king_danger_mask,
+        checking_pieces_mask,
+        pinned_pieces_mask: orthogonal_pin_mask | diagonal_pin_mask,
+    }
+}
+
+/// Detect the annoying en passant pin, when the capturing pawn and the captured pawn are the
+/// only pieces blocking a horizontal check by a rook.
+fn detect_en_passant_pin(
+    board: &Board,
+    all_pieces_bitboard: Bitboard,
+    capturing_pawn_square: Square,
+    king_square: Square,
+    en_passant_destination: Square,
+) -> bool {
+    if king_square.rank() != capturing_pawn_square.rank() {
+        return false;
+    }
+
+    // Signed dist from king to capturing pawn.
+    let dx = capturing_pawn_square.file().as_u8() as i32 - king_square.file().as_u8() as i32;
+    let sx = dx.signum();
+
+    // March from king square to the end of the board or until we encounter an enemy rook or
+    // another piece to block the check.
+    let mut sq = king_square;
+    let enemy_rook_bitboard = board
+        .pieces()
+        .piece_bitboard(Piece::new(PieceKind::Rook, !board.color_to_move()));
+    let enemy_pawn_bitboard = board
+        .pieces()
+        .piece_bitboard(Piece::new(PieceKind::Pawn, !board.color_to_move()));
+
+    while let Some(new_sq) = sq.translated_by((sx, 0)) {
+        sq = new_sq;
+
+        if all_pieces_bitboard.contains(sq) {
+            if enemy_rook_bitboard.contains(sq) {
+                // Pinned by this rook.
+                return true;
+            } else if (sq == capturing_pawn_square)
+                || (enemy_pawn_bitboard.contains(sq) && sq.file() == en_passant_destination.file())
+            {
+                // This is the capturing pawn or the captured pawn.
+                continue;
+            } else {
+                // Found another piece blocking the check.
+                return false;
             }
         }
     }
 
-    /// Calculates:
-    ///  - The bitboard of squares on which the king would be placed in check.
-    ///    This is the set of squares attacked by enemy pieces, with the king excluded as
-    ///    a blocker.
-    ///  - The bitboard of squares containing pieces that are checking the king.
-    ///  - The bitboard of squares containing pieces that are pinned to the king.
-    fn analyse_checks(
-        &self,
-        enemy_pieces: &[(Square, Piece)],
-        all_pieces_bitboard: Bitboard,
-        king_square: Square,
-    ) -> ChecksAnalysis {
-        let all_pieces_except_king_bitboard = all_pieces_bitboard.with_removed(king_square);
-        let mut king_danger_mask = Bitboard::empty();
-        let mut checking_pieces_mask = Bitboard::empty();
-
-        // Approach for detecting pinned piece locations:
-        // A piece is pinned if it is attacked by an enemy rook/bishop and both the
-        // pinned piece and the pinning piece would be attacked by our king if it were
-        // an enemy rook/bishop.
-        let mut orthogonal_pin_rays = Bitboard::empty();
-        let mut diagonal_pin_rays = Bitboard::empty();
-
-        let mut update_diagonal_pin_rays =
-            |enemy_attack_set: Bitboard, enemy_square: Square, king_square: Square| {
-                if unobstructed_bishop_attacks(king_square).contains(enemy_square) {
-                    diagonal_pin_rays |= enemy_attack_set;
-                }
-            };
-
-        let mut update_orthogonal_pin_rays =
-            |enemy_attacks: Bitboard, enemy_square: Square, king_square: Square| {
-                if unobstructed_rook_attacks(king_square).contains(enemy_square) {
-                    orthogonal_pin_rays |= enemy_attacks;
-                }
-            };
-
-        for &(enemy_square, enemy_piece) in enemy_pieces {
-            let attack_set = match enemy_piece {
-                Piece::WhiteRook | Piece::BlackRook => {
-                    let attacks = self
-                        .rook_attack_table
-                        .get_attack_set(enemy_square, all_pieces_except_king_bitboard);
-
-                    update_orthogonal_pin_rays(attacks, enemy_square, king_square);
-                    attacks
-                }
-                Piece::WhiteBishop | Piece::BlackBishop => {
-                    let attacks = self
-                        .bishop_attack_table
-                        .get_attack_set(enemy_square, all_pieces_except_king_bitboard);
-
-                    update_diagonal_pin_rays(attacks, enemy_square, king_square);
-                    attacks
-                }
-                Piece::WhiteQueen | Piece::BlackQueen => {
-                    let orthogonal_attacks = self
-                        .rook_attack_table
-                        .get_attack_set(enemy_square, all_pieces_except_king_bitboard);
-                    let diagonal_attacks = self
-                        .bishop_attack_table
-                        .get_attack_set(enemy_square, all_pieces_except_king_bitboard);
-
-                    update_diagonal_pin_rays(diagonal_attacks, enemy_square, king_square);
-                    update_orthogonal_pin_rays(orthogonal_attacks, enemy_square, king_square);
-
-                    orthogonal_attacks | diagonal_attacks
-                }
-                _ => self.get_pseudolegal_attacks_bitboard(
-                    enemy_piece,
-                    enemy_square,
-                    all_pieces_except_king_bitboard,
-                ),
-            };
-
-            king_danger_mask |= attack_set;
-            checking_pieces_mask.insert_if(enemy_square, attack_set.contains(king_square));
-        }
-
-        let orthogonal_pin_mask = self
-            .rook_attack_table
-            .get_attack_set(king_square, all_pieces_bitboard)
-            & orthogonal_pin_rays;
-        let diagonal_pin_mask = self
-            .bishop_attack_table
-            .get_attack_set(king_square, all_pieces_bitboard)
-            & diagonal_pin_rays;
-
-        ChecksAnalysis {
-            king_danger_mask,
-            checking_pieces_mask,
-            pinned_pieces_mask: orthogonal_pin_mask | diagonal_pin_mask,
-        }
-    }
-
-    /// Detect the annoying en passant pin, when the capturing pawn and the captured pawn are the
-    /// only pieces blocking a horizontal check by a rook.
-    fn detect_en_passant_pin(
-        &self,
-        board: &Board,
-        all_pieces_bitboard: Bitboard,
-        capturing_pawn_square: Square,
-        king_square: Square,
-        en_passant_destination: Square,
-    ) -> bool {
-        if king_square.rank() != capturing_pawn_square.rank() {
-            return false;
-        }
-
-        // Signed dist from king to capturing pawn.
-        let dx = capturing_pawn_square.file().as_u8() as i32 - king_square.file().as_u8() as i32;
-        let sx = dx.signum();
-
-        // March from king square to the end of the board or until we encounter an enemy rook or
-        // another piece to block the check.
-        let mut sq = king_square;
-        let enemy_rook_bitboard = board
-            .pieces()
-            .piece_bitboard(Piece::new(PieceKind::Rook, !board.color_to_move()));
-        let enemy_pawn_bitboard = board
-            .pieces()
-            .piece_bitboard(Piece::new(PieceKind::Pawn, !board.color_to_move()));
-
-        while let Some(new_sq) = sq.translated_by((sx, 0)) {
-            sq = new_sq;
-
-            if all_pieces_bitboard.contains(sq) {
-                if enemy_rook_bitboard.contains(sq) {
-                    // Pinned by this rook.
-                    return true;
-                } else if (sq == capturing_pawn_square)
-                    || (enemy_pawn_bitboard.contains(sq)
-                        && sq.file() == en_passant_destination.file())
-                {
-                    // This is the capturing pawn or the captured pawn.
-                    continue;
-                } else {
-                    // Found another piece blocking the check.
-                    return false;
-                }
-            }
-        }
-
-        false
-    }
+    false
 }
+// }
 
-impl Default for MoveGenerator {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+// impl Default for MoveGenerator {
+//     fn default() -> Self {
+//         Self::new()
+//     }
+// }
 
 /// Efficiently holds pieces - as each side has 16 pieces, this should never heap-allocate.
 type PieceVec = SmallVec<[(Square, Piece); 16]>;
@@ -554,9 +534,9 @@ mod tests {
 
     fn check_includes_moves(board_fen: &str, moves_uci: &[&str]) {
         let board = Board::from_fen(board_fen).unwrap();
-        let mg = MoveGenerator::new();
+        // let mg = MoveGenerator::new();
         let mut moves = MoveList::new();
-        mg.compute_legal_moves(&mut moves, &board);
+        compute_legal_moves(&mut moves, &board);
 
         for mv in moves_uci {
             if !moves.contains(&Move::from_uci(mv).unwrap()) {
@@ -571,9 +551,9 @@ mod tests {
 
     fn check_excludes_moves(board_fen: &str, moves_uci: &[&str]) {
         let board = Board::from_fen(board_fen).unwrap();
-        let mg = MoveGenerator::new();
+        // let mg = MoveGenerator::new();
         let mut moves = MoveList::new();
-        mg.compute_legal_moves(&mut moves, &board);
+        compute_legal_moves(&mut moves, &board);
 
         for mv in moves_uci {
             if moves.contains(&Move::from_uci(mv).unwrap()) {
@@ -588,9 +568,8 @@ mod tests {
 
     fn check_exact_moves(board_fen: &str, moves_uci: &[&str]) {
         let board = Board::from_fen(board_fen).unwrap();
-        let mg = MoveGenerator::new();
         let mut moves = MoveList::new();
-        mg.compute_legal_moves(&mut moves, &board);
+        compute_legal_moves(&mut moves, &board);
 
         let expected = moves_uci
             .iter()

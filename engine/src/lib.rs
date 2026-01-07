@@ -2,7 +2,7 @@
 #![allow(unused)]
 
 use chess_lib::board::{Board, Move, PieceKind};
-use chess_lib::movegen::{MoveGenerator, MoveList};
+use chess_lib::movegen::{compute_legal_moves, MoveList};
 use derive_new::new;
 use rand::rng;
 
@@ -41,7 +41,6 @@ pub fn minimax(
     board: &mut Board,
     depth_remaining: usize,
     prune: f32,
-    mg: &MoveGenerator,
     stop_fn: fn() -> bool,
 ) -> f32 {
     if depth_remaining == 0 {
@@ -51,7 +50,7 @@ pub fn minimax(
     // Both players are maximising so if -eval < prune, this branch will be pruned
 
     let mut options = MoveList::new();
-    mg.compute_legal_moves(&mut options, board);
+    compute_legal_moves(&mut options, board);
 
     if options.is_empty() {
         return f32::NEG_INFINITY; // Checkmate
@@ -60,7 +59,7 @@ pub fn minimax(
     let mut best_move = options[0];
     let um = board.make_move(options[0]);
     // Minimax returns opponent's score
-    let mut best_eval = -minimax(board, depth_remaining - 1, f32::NEG_INFINITY, mg, stop_fn);
+    let mut best_eval = -minimax(board, depth_remaining - 1, f32::NEG_INFINITY, stop_fn);
     board.unmake_last_move(um);
 
     if best_eval > -prune {
@@ -75,8 +74,12 @@ pub fn minimax(
 
         let um = board.make_move(mv);
         // Minimax returns opponent's score
-        let ev = -minimax(board, depth_remaining - 1, best_eval, mg, stop_fn);
+        let ev = -minimax(board, depth_remaining - 1, best_eval, stop_fn);
         board.unmake_last_move(um);
+
+        if ev == f32::INFINITY {
+            return ev;
+        }
 
         if ev > best_eval {
             best_move = mv;
@@ -97,17 +100,16 @@ pub fn search(
     cache: &mut InterMoveCache,
     stop_fn: fn() -> bool,
 ) -> Option<Move> {
-    const SEARCH_DEPTH: usize = 5;
+    const SEARCH_DEPTH: usize = 4;
 
     let mut rng = rng();
-    let mg = MoveGenerator::new();
     let mut options = MoveList::new();
-    mg.compute_legal_moves(&mut options, board);
+    compute_legal_moves(&mut options, board);
 
     let mut best_move = options[0];
     let um = board.make_move(options[0]);
     // Minimax returns opponent's score
-    let mut best_eval = -minimax(board, SEARCH_DEPTH, f32::NEG_INFINITY, &mg, stop_fn);
+    let mut best_eval = -minimax(board, SEARCH_DEPTH, f32::NEG_INFINITY, stop_fn);
     board.unmake_last_move(um);
 
     for mv in options.into_iter().skip(1) {
@@ -117,7 +119,7 @@ pub fn search(
 
         let um = board.make_move(mv);
         // Minimax returns opponent's score
-        let ev = -minimax(board, SEARCH_DEPTH, best_eval, &mg, stop_fn);
+        let ev = -minimax(board, SEARCH_DEPTH, best_eval, stop_fn);
         board.unmake_last_move(um);
 
         if ev > best_eval {
