@@ -4,7 +4,9 @@ Beans Gambit
 
 ## Version Notes
 
-This is the main version - see a specific version (`version/xxx`) and check the readme for details about it.
+- Minimax to depth 5
+- AB pruning
+- Very simple piece score evaluation
 
 ## Version History
 
