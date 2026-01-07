@@ -29,7 +29,7 @@ fn bot_vs_bot(bot1: ChessBot, bot2: ChessBot, options: &BotVsBotOptions) {
         .arg("-games")
         .arg(options.games.to_string())
         .arg("-pgnout")
-        .arg("game.txt");
+        .arg("game.pgn");
 
     cprintln!(
         "<c>Args: {}</>",
