@@ -6,3 +6,8 @@ target/
 *.log
 config.json
 png.png
+
+.direnv/
+
+versions/
+game.txt
