@@ -16,7 +16,7 @@ fn bot_vs_bot(bot1: ChessBot, bot2: ChessBot, options: &BotVsBotOptions) {
         .arg(format!("cmd={}", &bot2.path))
         .arg(format!("name={}", &bot2.name))
         .arg("-each")
-        .arg("tc=5+0")
+        .arg("tc=120+0")
         .arg("proto=uci")
         .arg(format!(
             "dir={}",
