@@ -1,5 +1,4 @@
-use crate::run::ChessBot;
-use crate::setup::LocalBot;
+use crate::setup::{ChessBot, LocalBot};
 use color_print::{cformat, cprint, cprintln};
 use either::Either;
 use std::collections::HashSet;

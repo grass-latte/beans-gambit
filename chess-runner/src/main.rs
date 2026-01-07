@@ -1,4 +1,5 @@
 mod bot_resolver;
+pub mod options;
 mod run;
 pub mod setup;
 
@@ -35,8 +36,7 @@ fn main() {
 mod tests {
     use super::*;
     use crate::bot_resolver::resolve_local_bot;
-    use crate::run::{ChessOptions, MatchType};
-    use crate::setup::LocalBot;
+    use crate::setup::{BotVsBotOptions, ChessOptions, LocalBot, MatchType};
 
     #[test]
     fn test_fastchess_compliance() {
@@ -61,7 +61,7 @@ mod tests {
             resolve_local_bot(LocalBot::BeansGambitLocal),
             resolve_local_bot(LocalBot::Stockfish),
         ];
-        let options = ChessOptions::new(MatchType::BotVsBot);
+        let options = ChessOptions::new(MatchType::BotVsBot(BotVsBotOptions::default()));
         run(options, bots);
     }
 }

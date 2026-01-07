@@ -1,7 +1,8 @@
-use crate::run::{ChessOptions, MatchType};
 use color_print::cprintln;
-use dialoguer::Select;
+use derive_getters::Getters;
+use derive_new::new;
 use dialoguer::theme::ColorfulTheme;
+use dialoguer::{Input, Select};
 use either::Either;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
@@ -10,6 +11,87 @@ use std::str::FromStr;
 use std::sync::LazyLock;
 use strum::{EnumCount, IntoEnumIterator};
 use strum_macros::{Display, EnumCount, EnumIter, EnumString};
+
+pub struct BotVsBotOptions {
+    pub games: usize,
+}
+
+impl Default for BotVsBotOptions {
+    fn default() -> Self {
+        BotVsBotOptions { games: 1 }
+    }
+}
+
+pub enum MatchType {
+    BotVsBot(BotVsBotOptions),
+    Compliance,
+}
+
+impl MatchType {
+    pub fn setup_bot_vs_bot() -> MatchType {
+        let selection = Select::with_theme(&ColorfulTheme::default())
+            .with_prompt("Configure Bot v Bot")
+            .items(vec!["Default", "Custom"])
+            .default(0)
+            .interact()
+            .unwrap();
+
+        if selection == 0 {
+            MatchType::BotVsBot(BotVsBotOptions { games: 5 })
+        } else {
+            let i = Input::with_theme(&ColorfulTheme::default())
+                .with_prompt("Enter number of games (1-1000)")
+                .validate_with(|i: &String| {
+                    if i.parse::<usize>().is_ok_and(|i| (1..=1000).contains(&i)) {
+                        Ok(())
+                    } else {
+                        Err("Invalid number of games")
+                    }
+                })
+                .interact()
+                .unwrap();
+
+            MatchType::BotVsBot(BotVsBotOptions {
+                games: i.parse::<usize>().unwrap(),
+            })
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, EnumIter, EnumString, Display)]
+pub enum SimpleMatchType {
+    #[strum(serialize = "Bot v Bot")]
+    BotVsBot,
+    #[strum(serialize = "Compliance")]
+    Compliance,
+}
+
+impl SimpleMatchType {
+    pub fn bots_required(&self) -> usize {
+        match &self {
+            SimpleMatchType::BotVsBot => 2,
+            SimpleMatchType::Compliance => 1,
+        }
+    }
+
+    pub fn complete_setup(&self) -> MatchType {
+        match &self {
+            SimpleMatchType::BotVsBot => MatchType::setup_bot_vs_bot(),
+            SimpleMatchType::Compliance => MatchType::Compliance,
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct ChessBot {
+    pub name: String,
+    pub path: String,
+}
+
+#[derive(new, Getters)]
+pub struct ChessOptions {
+    setup: MatchType,
+}
 
 fn get_remote_versions() -> Vec<String> {
     let Ok(output) = Command::new("git")
@@ -69,6 +151,7 @@ fn select_bot(index: usize) -> Either<LocalBot, String> {
     let selection = Select::with_theme(&ColorfulTheme::default())
         .with_prompt(format!("Select bot {index}"))
         .items(&versions)
+        .default(0)
         .interact()
         .unwrap();
 
@@ -81,13 +164,13 @@ fn select_bot(index: usize) -> Either<LocalBot, String> {
 }
 
 pub fn select_options() -> (ChessOptions, Vec<Either<LocalBot, String>>) {
-    let items: Vec<_> = MatchType::iter().map(|a| a.to_string()).collect();
+    let items: Vec<_> = SimpleMatchType::iter().map(|a| a.to_string()).collect();
     let selection = Select::with_theme(&ColorfulTheme::default())
         .with_prompt("Select option")
         .items(&items)
         .interact()
         .unwrap();
-    let selection = MatchType::from_str(&items[selection]).unwrap();
+    let selection = SimpleMatchType::from_str(&items[selection]).unwrap();
 
     let mut bots = Vec::new();
 
@@ -95,5 +178,5 @@ pub fn select_options() -> (ChessOptions, Vec<Either<LocalBot, String>>) {
         bots.push(select_bot(i));
     }
 
-    (ChessOptions::new(selection), bots)
+    (ChessOptions::new(selection.complete_setup()), bots)
 }

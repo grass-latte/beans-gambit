@@ -1,43 +1,12 @@
+use crate::setup::{BotVsBotOptions, ChessBot, ChessOptions, MatchType};
 use color_print::{cformat, cprintln};
-use derive_getters::Getters;
-use derive_new::new;
 use itertools::Itertools;
-use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::process::Command;
 use std::str::FromStr;
-use strum_macros::{Display, EnumIter, EnumString};
-
-#[derive(Debug, Serialize, Deserialize, EnumIter, EnumString, Display)]
-pub enum MatchType {
-    #[strum(serialize = "Bot v Bot")]
-    BotVsBot,
-    #[strum(serialize = "Compliance")]
-    Compliance,
-}
-
-impl MatchType {
-    pub fn bots_required(&self) -> usize {
-        match &self {
-            MatchType::BotVsBot => 2,
-            MatchType::Compliance => 1,
-        }
-    }
-}
-
-#[derive(Clone)]
-pub struct ChessBot {
-    pub name: String,
-    pub path: String,
-}
-
-#[derive(new, Getters)]
-pub struct ChessOptions {
-    setup: MatchType,
-}
 
 #[allow(unused)]
-fn bot_vs_bot(bot1: ChessBot, bot2: ChessBot) {
+fn bot_vs_bot(bot1: ChessBot, bot2: ChessBot, options: &BotVsBotOptions) {
     let mut command = Command::new("fastchess");
     let command = command
         .arg("-engine")
@@ -58,7 +27,7 @@ fn bot_vs_bot(bot1: ChessBot, bot2: ChessBot) {
                 .display()
         ))
         .arg("-games")
-        .arg("1")
+        .arg(options.games.to_string())
         .arg("-pgnout")
         .arg("game.txt");
 
@@ -115,6 +84,6 @@ fn compliance(bot: ChessBot) {
 pub fn run(options: ChessOptions, bots: Vec<ChessBot>) {
     match options.setup() {
         MatchType::Compliance => compliance(bots[0].clone()),
-        MatchType::BotVsBot => bot_vs_bot(bots[0].clone(), bots[1].clone()),
+        MatchType::BotVsBot(options) => bot_vs_bot(bots[0].clone(), bots[1].clone(), options),
     }
 }
