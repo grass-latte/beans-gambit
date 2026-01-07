@@ -68,11 +68,23 @@ fn main() {
         dispatch.level(log::LevelFilter::Info).apply().unwrap();
     }
 
+    info!(
+        "Binary: {}",
+        std::env::current_exe().unwrap().to_str().unwrap()
+    );
+
     let mut debug = false;
     let mut state = UciState::new();
     let mut board = Board::starting();
 
     println!(
+        "Beans Gambit UCI v{} [Bot v{} | Chess Lib v{}]",
+        version(),
+        engine::version(),
+        chess_lib::version()
+    );
+
+    info!(
         "Beans Gambit UCI v{} [Bot v{} | Chess Lib v{}]",
         version(),
         engine::version(),

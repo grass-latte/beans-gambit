@@ -5,4 +5,9 @@ target/
 
 *.log
 config.json
-png.png
+game.txt
+
+.direnv/
+flake.lock
+
+versions/

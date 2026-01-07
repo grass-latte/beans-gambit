@@ -1,47 +1,25 @@
+use crate::setup::{BotVsBotOptions, ChessBot, ChessOptions, MatchType};
 use color_print::{cformat, cprintln};
-use derive_getters::Getters;
-use derive_new::new;
 use itertools::Itertools;
-use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::process::Command;
 use std::str::FromStr;
-use strum_macros::{Display, EnumIter, EnumString};
-
-#[derive(Debug, Serialize, Deserialize, EnumIter, EnumString, Display)]
-pub enum MatchSetup {
-    #[strum(serialize = "Compliance")]
-    Compliance,
-    #[strum(serialize = "Bot v Bot")]
-    BotVBot,
-    #[strum(serialize = "Bot v White Human")]
-    BotVWhiteHuman,
-    #[strum(serialize = "Bot v Black Human")]
-    BotVBlackHuman,
-    #[strum(serialize = "Human v Human")]
-    HumanVHuman,
-}
-
-#[derive(new, Getters)]
-pub struct ChessOptions {
-    setup: MatchSetup,
-}
 
 #[allow(unused)]
-fn bot_v_bot(engine_path: PathBuf) {
+fn bot_vs_bot(bot1: ChessBot, bot2: ChessBot, options: &BotVsBotOptions) {
     let mut command = Command::new("fastchess");
     let command = command
         .arg("-engine")
-        .arg(format!("cmd={}", engine_path.display()))
-        .arg("name=E1")
+        .arg(format!("cmd={}", &bot1.path))
+        .arg(format!("name={}", &bot1.name))
         .arg("-engine")
-        .arg(format!("cmd={}", engine_path.display()))
-        .arg("name=E2")
+        .arg(format!("cmd={}", &bot2.path))
+        .arg(format!("name={}", &bot2.name))
         .arg("-each")
         .arg("tc=5+0")
         .arg("proto=uci")
         .arg(format!(
-            "dir=\"{}\"",
+            "dir={}",
             PathBuf::from_str(".")
                 .unwrap()
                 .canonicalize()
@@ -49,9 +27,9 @@ fn bot_v_bot(engine_path: PathBuf) {
                 .display()
         ))
         .arg("-games")
-        .arg("1")
+        .arg(options.games.to_string())
         .arg("-pgnout")
-        .arg("png.png");
+        .arg("game.txt");
 
     cprintln!(
         "<c>Args: {}</>",
@@ -76,11 +54,9 @@ fn bot_v_bot(engine_path: PathBuf) {
     }
 }
 
-fn compliance(engine_path: PathBuf) {
+fn compliance(bot: ChessBot) {
     let mut command = Command::new("fastchess");
-    let command = command
-        .arg("--compliance")
-        .arg(engine_path.display().to_string());
+    let command = command.arg("--compliance").arg(bot.path);
 
     cprintln!(
         "<c>Args: {}</>",
@@ -105,9 +81,9 @@ fn compliance(engine_path: PathBuf) {
     }
 }
 
-pub fn run(options: ChessOptions, engine_path: PathBuf) {
+pub fn run(options: ChessOptions, bots: Vec<ChessBot>) {
     match options.setup() {
-        MatchSetup::Compliance => compliance(engine_path),
-        _ => todo!(),
+        MatchType::Compliance => compliance(bots[0].clone()),
+        MatchType::BotVsBot(options) => bot_vs_bot(bots[0].clone(), bots[1].clone(), options),
     }
 }

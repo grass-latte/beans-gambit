@@ -1,28 +1,67 @@
-mod options;
-mod prerequisites;
+mod bot_resolver;
+pub mod options;
 mod run;
+pub mod setup;
 
-use crate::options::select_options;
-use prerequisites::prerequisites;
+use crate::bot_resolver::resolve_bot;
+use crate::setup::select_options;
+use itertools::Itertools;
 use run::run;
+use std::collections::HashSet;
 
 fn main() {
-    let engine_path = prerequisites();
+    let (options, unresolved_bots) = select_options();
 
-    let options = select_options();
+    let mut bots = unresolved_bots.into_iter().map(resolve_bot).collect_vec();
 
-    run(options, engine_path);
+    // Ensure unique bot names
+    let mut bot_names = HashSet::new();
+    for bot in &mut bots {
+        let mut suffix = 2;
+        if bot_names.insert(bot.name.clone()) {
+            continue;
+        }
+
+        while !bot_names.insert(format!("{}_{}", bot.name, suffix)) {
+            suffix += 1;
+        }
+
+        bot.name = format!("{}_{}", bot.name, suffix);
+    }
+
+    run(options, bots);
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::run::{ChessOptions, MatchSetup};
+    use crate::bot_resolver::resolve_local_bot;
+    use crate::setup::{BotVsBotOptions, ChessOptions, LocalBot, MatchType};
 
     #[test]
     fn test_fastchess_compliance() {
-        let engine_path = prerequisites();
-        let options = ChessOptions::new(MatchSetup::Compliance);
-        run(options, engine_path);
+        let bots = vec![resolve_local_bot(LocalBot::BeansGambitLocal)];
+        let options = ChessOptions::new(MatchType::Compliance);
+        run(options, bots);
+    }
+
+    // #[test]
+    // fn test_bot_vs_bot() {
+    //     let bots = vec![
+    //         resolve_local_bot(LocalBot::BeansGambitLocal),
+    //         resolve_local_bot(LocalBot::BeansGambitLocal),
+    //     ];
+    //     let options = ChessOptions::new(MatchType::BotVsBot);
+    //     run(options, bots);
+    // }
+
+    #[test]
+    fn test_bot_vs_stockfish() {
+        let bots = vec![
+            resolve_local_bot(LocalBot::BeansGambitLocal),
+            resolve_local_bot(LocalBot::Stockfish),
+        ];
+        let options = ChessOptions::new(MatchType::BotVsBot(BotVsBotOptions::default()));
+        run(options, bots);
     }
 }
