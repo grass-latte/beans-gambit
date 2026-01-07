@@ -16,6 +16,7 @@ use std::fs::File;
 use std::io::{BufRead, Write};
 use std::process::exit;
 use std::str::FromStr;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use std::{io, thread};
 use strum::IntoEnumIterator;
@@ -39,6 +40,9 @@ fn send_info<S1: AsRef<str>, S2: AsRef<str>>(info: S1, value: S2) {
         )])
     );
 }
+
+static RUNNING: AtomicBool = AtomicBool::new(false);
+static SHOULD_STOP: AtomicBool = AtomicBool::new(false);
 
 fn main() {
     std::panic::set_hook(Box::new(|info| {
@@ -153,28 +157,49 @@ fn main() {
                 time_control,
                 search_control,
             } => {
-                let mut c = InterMoveCache::new();
-                let result = search(&mut board, &mut c).unwrap();
+                if RUNNING.load(Ordering::Acquire) {
+                    panic!("Tried to go while already running!");
+                }
 
-                // fastchess requires at least one info message with socre
-                send_uci(UciMessage::Info(vec![UciInfoAttribute::Score {
-                    cp: Some(0),
-                    mate: None,
-                    lower_bound: None,
-                    upper_bound: None,
-                }]));
+                RUNNING.store(true, Ordering::Release);
 
-                send_uci(UciMessage::BestMove {
-                    best_move: UciMove {
-                        from: to_uci_square(result.source),
-                        to: to_uci_square(result.destination),
-                        promotion: result.promotion.map(to_uci_piece),
-                    },
-                    ponder: None,
+                thread::spawn(move || {
+                    let mut c = InterMoveCache::new();
+                    let mut board = board;
+                    let result =
+                        search(&mut board, &mut c, || SHOULD_STOP.load(Ordering::Acquire)).unwrap();
+
+                    // fastchess requires at least one info message with score
+                    send_uci(UciMessage::Info(vec![UciInfoAttribute::Score {
+                        cp: Some(0),
+                        mate: None,
+                        lower_bound: None,
+                        upper_bound: None,
+                    }]));
+
+                    send_uci(UciMessage::BestMove {
+                        best_move: UciMove {
+                            from: to_uci_square(result.source),
+                            to: to_uci_square(result.destination),
+                            promotion: result.promotion.map(to_uci_piece),
+                        },
+                        ponder: None,
+                    });
+
+                    RUNNING.store(false, Ordering::Release);
                 });
             }
             UciMessage::Stop => {
-                todo!()
+                if RUNNING.load(Ordering::Acquire) {
+                    info!("Setting stop flag");
+                    SHOULD_STOP.store(true, Ordering::Release);
+                    info!("Waiting for run flag to be unset");
+                    while RUNNING.load(Ordering::Acquire) {
+                        thread::sleep(Duration::from_millis(5));
+                    }
+                    info!("Unsetting stop flag");
+                    SHOULD_STOP.store(false, Ordering::Release);
+                }
             }
             UciMessage::PonderHit => {
                 todo!()

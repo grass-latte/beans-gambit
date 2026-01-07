@@ -6,3 +6,8 @@ members = ["engine", "engine-uci", "chess-gui", "chess-lib", "chess-runner", "ut
 # Enable some optimizations in tests, so Perft goes faster.
 opt-level = 1
 
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+
