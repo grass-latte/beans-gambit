@@ -4,7 +4,6 @@ use derive_new::new;
 use dialoguer::theme::ColorfulTheme;
 use dialoguer::{Input, Select};
 use either::Either;
-use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::process::Command;
 use std::str::FromStr;
@@ -103,12 +102,12 @@ fn get_remote_versions() -> Vec<String> {
         ])
         .output()
     else {
-        cprintln!("<y,b>Failed to execute git command to fetch remote versions</>");
+        cprintln!("<y,bold>Failed to execute git command to fetch remote versions</>");
         return vec![];
     };
 
     if !output.status.success() {
-        cprintln!("<y,b>git command to fetch remote versions returned failure exit code</>");
+        cprintln!("<y,bold>git command to fetch remote versions returned failure exit code</>");
         return vec![];
     }
 
@@ -129,16 +128,30 @@ fn get_remote_versions() -> Vec<String> {
 
 static AVAILABLE_VERSIONS: LazyLock<Vec<String>> = LazyLock::new(get_remote_versions);
 
-#[derive(Debug, Serialize, Deserialize, EnumIter, EnumString, Display, EnumCount, Hash)]
+#[derive(Debug, Serialize, Deserialize, EnumString, EnumIter, Display, EnumCount, Hash)]
 pub enum LocalBot {
-    #[strum(serialize = "Stockfish")]
-    Stockfish,
     #[strum(serialize = "Beans Gambit [local]")]
     BeansGambitLocal,
+    #[strum(serialize = "Stockfish")]
+    Stockfish,
+}
+
+impl LocalBot {
+    pub fn get_available() -> Vec<String> {
+        let mut options = vec![LocalBot::BeansGambitLocal.to_string()];
+
+        if which::which("stockfish").is_ok() {
+            options.push(LocalBot::Stockfish.to_string());
+        } else {
+            cprintln!("<yellow,bold>Stockfish not found</>");
+        }
+
+        options
+    }
 }
 
 fn select_bot(index: usize) -> Either<LocalBot, String> {
-    let mut versions = LocalBot::iter().map(|n| n.to_string()).collect_vec();
+    let mut versions = LocalBot::get_available();
 
     let available_remote_versions: &Vec<String> = AVAILABLE_VERSIONS.as_ref();
 
