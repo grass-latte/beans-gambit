@@ -10,9 +10,10 @@ use std::{
     process::{ChildStdout, Command, Stdio, exit},
 };
 
+use chess_lib::movegen::compute_legal_moves;
 use chess_lib::{
     board::{Board, Move},
-    movegen::{MoveGenerator, MoveList},
+    movegen::MoveList,
 };
 use clap::Parser;
 use clap_derive::Parser;
@@ -55,13 +56,13 @@ fn read_lines_until(stdout: &mut ChildStdout, end: impl Fn(&str) -> bool) -> Vec
 }
 
 /// Perft implemented using bulk counting.
-fn perft(board: &mut Board, movegen: &MoveGenerator, depth: u64) -> u64 {
+fn perft(board: &mut Board, depth: u64) -> u64 {
     if depth == 0 {
         return 1;
     }
 
     let mut move_list = MoveList::new();
-    movegen.compute_legal_moves(&mut move_list, board);
+    compute_legal_moves(&mut move_list, board);
 
     if depth == 1 {
         return move_list.len() as u64;
@@ -70,7 +71,7 @@ fn perft(board: &mut Board, movegen: &MoveGenerator, depth: u64) -> u64 {
     let mut nodes: u64 = 0;
     for &mv in move_list.iter() {
         let unmake = board.make_move(mv);
-        nodes += perft(board, movegen, depth - 1);
+        nodes += perft(board, depth - 1);
         board.unmake_last_move(unmake);
     }
 
@@ -84,18 +85,17 @@ fn user_error(message: impl AsRef<str>) -> ! {
 
 fn divide_manual(fen: &str, depth: u64) {
     let mut board = Board::from_fen(fen).expect("couldn't parse fen string");
-    let mg = MoveGenerator::new();
     let mut moves = MoveList::new();
 
     for depth in (1..depth).rev() {
         moves.clear();
-        mg.compute_legal_moves(&mut moves, &board);
+        compute_legal_moves(&mut moves, &board);
         moves.sort_by_key(Move::as_uci);
 
         let mut total = 0;
         for &mv in &moves {
             let um = board.make_move(mv);
-            let nodes = perft(&mut board, &mg, depth);
+            let nodes = perft(&mut board, depth);
             total += nodes;
             board.unmake_last_move(um);
             cprintln!("<green>{}</green>: {}", mv.as_uci(), nodes);
@@ -128,18 +128,17 @@ fn divide_auto(fen: &str, depth: u64) {
     }
 
     let mut board = Board::from_fen(fen).expect("couldn't parse fen string");
-    let mg = MoveGenerator::new();
     let mut moves = MoveList::new();
 
     for depth in (0..depth).rev() {
         moves.clear();
-        mg.compute_legal_moves(&mut moves, &board);
+        compute_legal_moves(&mut moves, &board);
         let our_moves = moves
             .iter()
             .copied()
             .map(|mv| {
                 let um = board.make_move(mv);
-                let nodes = perft(&mut board, &mg, depth);
+                let nodes = perft(&mut board, depth);
                 board.unmake_last_move(um);
 
                 (mv, nodes)

@@ -61,7 +61,7 @@ mod tests {
             resolve_local_bot(LocalBot::BeansGambitLocal),
             resolve_local_bot(LocalBot::Stockfish),
         ];
-        let options = ChessOptions::new(MatchType::BotVsBot(BotVsBotOptions::default()));
+        let options = ChessOptions::new(MatchType::BotVsBot(BotVsBotOptions { games: 1 }));
         run(options, bots);
     }
 }
