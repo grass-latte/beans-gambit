@@ -2,6 +2,6 @@
 
 Beans Gambit
 
-## Version Notes
+## Version Notes - 0.2.0
 
-This is the main version - see a specific version (`version/xxx`) and check the readme for details about it.
+- Plays the move that minimises possible opponent moves
