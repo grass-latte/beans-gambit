@@ -45,7 +45,7 @@ fn get_remote_versions() -> Vec<String> {
     versions
 }
 
-static AVAILABLE_VERSIONS: LazyLock<Vec<String>> = LazyLock::new(|| get_remote_versions());
+static AVAILABLE_VERSIONS: LazyLock<Vec<String>> = LazyLock::new(get_remote_versions);
 
 #[derive(Debug, Serialize, Deserialize, EnumIter, EnumString, Display, EnumCount, Hash)]
 pub enum LocalBot {

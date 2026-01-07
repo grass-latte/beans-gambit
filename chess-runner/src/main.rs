@@ -15,17 +15,17 @@ fn main() {
 
     // Ensure unique bot names
     let mut bot_names = HashSet::new();
-    for i in 0..bots.len() {
+    for bot in &mut bots {
         let mut suffix = 2;
-        if bot_names.insert(bots[i].name.clone()) {
+        if bot_names.insert(bot.name.clone()) {
             continue;
         }
 
-        while !bot_names.insert(format!("{}_{}", bots[i].name, suffix)) {
+        while !bot_names.insert(format!("{}_{}", bot.name, suffix)) {
             suffix += 1;
         }
 
-        bots[i].name = format!("{}_{}", bots[i].name, suffix);
+        bot.name = format!("{}_{}", bot.name, suffix);
     }
 
     run(options, bots);

@@ -57,7 +57,7 @@ fn compile_directory(directory: PathBuf) -> PathBuf {
     );
 
     if !DIRECTORIES_BUILT.lock().unwrap().contains(&target_dir) {
-        let crate_to_build = fs::read_to_string(&target_dir.join("uci-crate"))
+        let crate_to_build = fs::read_to_string(target_dir.join("uci-crate"))
             .unwrap_or("engine-uci".to_string())
             .trim()
             .to_string();
@@ -161,13 +161,13 @@ pub fn resolve_remote_bot(version: String) -> ChessBot {
             );
         }
 
-        if fs::exists(format!("versions/{version}")).unwrap_or(false) {
-            if fs::remove_dir_all(format!("versions/{version}")).is_err() {
-                panic!(
-                    "{}",
-                    cformat!("<r,bold>Failed to remove versions/{version}</>")
-                );
-            }
+        if fs::exists(format!("versions/{version}")).unwrap_or(false)
+            && fs::remove_dir_all(format!("versions/{version}")).is_err()
+        {
+            panic!(
+                "{}",
+                cformat!("<r,bold>Failed to remove versions/{version}</>")
+            );
         }
 
         let Ok(status) = Command::new("git")
