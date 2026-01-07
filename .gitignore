@@ -5,7 +5,9 @@ target/
 
 *.log
 config.json
-output.png
+game.txt
 
 .direnv/
 flake.lock
+
+versions/

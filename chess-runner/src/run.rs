@@ -10,7 +10,7 @@ use strum_macros::{Display, EnumIter, EnumString};
 
 #[derive(Debug, Serialize, Deserialize, EnumIter, EnumString, Display)]
 pub enum MatchType {
-    #[strum(serialize = "Beans v Beans")]
+    #[strum(serialize = "Bot v Bot")]
     BotVsBot,
     #[strum(serialize = "Compliance")]
     Compliance,
@@ -34,7 +34,6 @@ pub struct ChessBot {
 #[derive(new, Getters)]
 pub struct ChessOptions {
     setup: MatchType,
-    bots: Vec<ChessBot>,
 }
 
 #[allow(unused)]
@@ -61,7 +60,7 @@ fn bot_vs_bot(bot1: ChessBot, bot2: ChessBot) {
         .arg("-games")
         .arg("1")
         .arg("-pgnout")
-        .arg("output.png");
+        .arg("game.txt");
 
     cprintln!(
         "<c>Args: {}</>",
@@ -86,9 +85,9 @@ fn bot_vs_bot(bot1: ChessBot, bot2: ChessBot) {
     }
 }
 
-fn compliance(engine_path: &str) {
+fn compliance(bot: ChessBot) {
     let mut command = Command::new("fastchess");
-    let command = command.arg("--compliance").arg(engine_path);
+    let command = command.arg("--compliance").arg(bot.path);
 
     cprintln!(
         "<c>Args: {}</>",
@@ -113,16 +112,9 @@ fn compliance(engine_path: &str) {
     }
 }
 
-pub fn run(options: ChessOptions) {
-    let beans_engine_path = beans_engine_path.display().to_string();
-    let beans_engine_path = &beans_engine_path;
-
-    let stockfish_path = which::which("stockfish").unwrap().display().to_string();
-    let stockfish_path = &stockfish_path;
-
+pub fn run(options: ChessOptions, bots: Vec<ChessBot>) {
     match options.setup() {
-        MatchType::Compliance => compliance(options.bots[0]),
-        MatchType::BotVsBot => bot_vs_bot(options.bots[0].clone(), options.bots[1].clone()),
-        _ => todo!(),
+        MatchType::Compliance => compliance(bots[0].clone()),
+        MatchType::BotVsBot => bot_vs_bot(bots[0].clone(), bots[1].clone()),
     }
 }
