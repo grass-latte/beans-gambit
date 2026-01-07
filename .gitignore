@@ -5,7 +5,7 @@ target/
 
 *.log
 config.json
-game.txt
+game.pgn
 
 .direnv/
 flake.lock
