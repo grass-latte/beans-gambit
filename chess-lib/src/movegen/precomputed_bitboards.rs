@@ -1,4 +1,4 @@
-/// Attack sets for a black pawn on each square.
+/// Attack sets for aBitboard black pawn on each square.
 pub const BLACK_PAWN_ATTACK_SETS: [u64; 64] = [
     0,
     0,
