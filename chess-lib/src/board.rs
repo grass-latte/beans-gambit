@@ -1,10 +1,12 @@
 mod bitboard;
 mod color;
+mod hash;
 mod mv;
 mod piece;
 mod piece_storage;
 mod square;
 
+use crate::board::hash::BoardHash;
 pub use bitboard::*;
 pub use color::*;
 pub use mv::*;
@@ -18,10 +20,10 @@ pub struct Board {
     pieces: PieceStorage,
     color_to_move: Color,
     en_passant_destination: Option<Square>,
-    white_castling_rights: CastlingRights,
-    black_castling_rights: CastlingRights,
-    halfmoves_since_event: usize, // Since last capture or pawn move
-    fullmoves: usize,
+    castling_rights: CastlingRights,
+    halfmoves_since_event: u32, // Since last capture or pawn move
+    fullmoves: u32,
+    hash: BoardHash,
 }
 
 impl Board {
@@ -29,30 +31,41 @@ impl Board {
         pieces: &[Option<Piece>; 64],
         color_to_move: Color,
         en_passant_destination: Option<Square>,
-        white_castling_rights: CastlingRights,
-        black_castling_rights: CastlingRights,
-        halfmoves_since_event: usize,
-        fullmoves: usize,
+        castling_rights: CastlingRights,
+        halfmoves_since_event: u32,
+        fullmoves: u32,
     ) -> Board {
+        let mut hash = BoardHash::zero();
+
         let mut piece_storage = PieceStorage::new();
         for (i, piece) in pieces.iter().enumerate() {
             if let Some(piece) = piece {
                 debug_assert!(i < 64);
                 // SAFETY: pieces length is 64 so the u8 is correct
                 unsafe {
-                    piece_storage.set(Square::from_u8_unchecked(i as u8), Some(*piece));
+                    hash =
+                        piece_storage.set(hash, Square::from_u8_unchecked(i as u8), Some(*piece));
                 }
             }
         }
+
+        if !color_to_move.is_white() {
+            hash = hash.toggle_move();
+        }
+        if let Some(en_passant_destination) = en_passant_destination {
+            hash = hash.set_en_passant_file(None, Some(en_passant_destination.file()));
+        }
+
+        hash = hash.update_castling_rights(CastlingRights::all(), castling_rights);
 
         Self {
             pieces: piece_storage,
             color_to_move,
             en_passant_destination,
-            white_castling_rights,
-            black_castling_rights,
+            castling_rights,
             halfmoves_since_event,
             fullmoves,
+            hash,
         }
     }
 
@@ -61,8 +74,7 @@ impl Board {
             &[None; 64],
             Color::White,
             None,
-            Default::default(),
-            Default::default(),
+            CastlingRights::none(),
             0,
             0,
         )
@@ -70,6 +82,10 @@ impl Board {
 
     pub fn starting() -> Board {
         Board::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1").unwrap()
+    }
+
+    pub fn hash(&self) -> BoardHash {
+        self.hash
     }
 
     pub fn from_fen(fen: &str) -> Result<Board, String> {
@@ -129,14 +145,12 @@ impl Board {
             }
         }
 
-        let white_castling_rights = CastlingRights {
-            kingside: castling_chars.contains(&'K'),
-            queenside: castling_chars.contains(&'Q'),
-        };
-        let black_castling_rights = CastlingRights {
-            kingside: castling_chars.contains(&'k'),
-            queenside: castling_chars.contains(&'q'),
-        };
+        let castling_rights = CastlingRights::new(
+            castling_chars.contains(&'Q'),
+            castling_chars.contains(&'K'),
+            castling_chars.contains(&'q'),
+            castling_chars.contains(&'k'),
+        );
 
         // * En Passant
         let en_passant = if sections[3] == "-" {
@@ -154,12 +168,12 @@ impl Board {
         };
 
         // * Halfmoves since last capture or pawn move
-        let Ok(halfmoves_since_event): Result<usize, _> = sections[4].parse() else {
+        let Ok(halfmoves_since_event): Result<u32, _> = sections[4].parse() else {
             return invalid_fen_err("halfmoves not a number".to_string());
         };
 
         // * Fullmoves
-        let Ok(fullmoves): Result<usize, _> = sections[5].parse() else {
+        let Ok(fullmoves): Result<u32, _> = sections[5].parse() else {
             return invalid_fen_err("fullmoves not a number".to_string());
         };
 
@@ -167,8 +181,7 @@ impl Board {
             &pieces,
             to_move,
             en_passant,
-            white_castling_rights,
-            black_castling_rights,
+            castling_rights,
             halfmoves_since_event,
             fullmoves,
         ))
@@ -211,16 +224,16 @@ impl Board {
         output += &format!(" {} ", self.color_to_move.as_char());
 
         let mut castling_string = String::new();
-        if self.white_castling_rights.kingside {
+        if self.castling_rights.kingside(Color::White) {
             castling_string.push('K');
         }
-        if self.white_castling_rights.queenside {
+        if self.castling_rights.queenside(Color::White) {
             castling_string.push('Q');
         }
-        if self.black_castling_rights.kingside {
+        if self.castling_rights.kingside(Color::Black) {
             castling_string.push('k');
         }
-        if self.black_castling_rights.queenside {
+        if self.castling_rights.queenside(Color::Black) {
             castling_string.push('q');
         }
         if castling_string.is_empty() {
@@ -240,22 +253,6 @@ impl Board {
         output
     }
 
-    pub fn castling_rights_for_color(&self, color: Color) -> CastlingRights {
-        if color == Color::White {
-            self.white_castling_rights
-        } else {
-            self.black_castling_rights
-        }
-    }
-
-    fn castling_rights_for_color_mut(&mut self, color: Color) -> &mut CastlingRights {
-        if color == Color::White {
-            &mut self.white_castling_rights
-        } else {
-            &mut self.black_castling_rights
-        }
-    }
-
     pub fn make_move(&mut self, mv: Move) -> UnmakeInfo {
         let source_piece = self
             .pieces
@@ -271,10 +268,13 @@ impl Board {
             destination: mv.destination,
             captured: destination_piece, // Changed for en passant
             old_en_passant_destination: self.en_passant_destination,
-            old_castling_rights: *self.castling_rights_for_color_mut(self.color_to_move),
+            old_castling_rights: self.castling_rights,
             old_halfmoves_since_event: self.halfmoves_since_event,
         };
 
+        self.hash = self
+            .hash
+            .set_en_passant_file(self.en_passant_destination.map(|s| s.file()), None);
         self.en_passant_destination = None;
 
         match (
@@ -285,44 +285,63 @@ impl Board {
         ) {
             (PieceKind::Pawn, None, (dx, _), _) if dx != 0 => {
                 // En passant
-                self.pieces.set(mv.source, None);
-                self.pieces.set(mv.destination, Some(source_piece));
-                self.pieces
-                    .set(Square::at(mv.destination.file(), mv.source.rank()), None);
+                self.hash = self.pieces.set(self.hash, mv.source, None);
+
+                self.hash = self
+                    .pieces
+                    .set(self.hash, mv.destination, Some(source_piece));
+
+                self.hash = self.pieces.set(
+                    self.hash,
+                    Square::at(mv.destination.file(), mv.source.rank()),
+                    None,
+                );
+
                 unmake_info.captured = Some(PieceKind::Pawn);
             }
             (_, _, (_, _), Some(piece)) => {
                 // Promotion
-                self.pieces.set(mv.source, None);
-                self.pieces.set(
+                self.hash = self.pieces.set(self.hash, mv.source, None);
+                self.hash = self.pieces.set(
+                    self.hash,
                     mv.destination,
                     Some(Piece::new(piece, source_piece.color())),
                 );
             }
             (PieceKind::King, _, (-2, _), _) => {
                 // Long castle
-                *self.castling_rights_for_color_mut(source_piece.color()) = CastlingRights::none();
-                self.pieces.set(mv.source, None);
-                self.pieces.set(mv.destination, Some(source_piece));
-                self.pieces
-                    .set(Square::at(BoardFile::A, mv.source.rank()), None);
-                self.pieces.set(
+                (self.hash, self.castling_rights) = self
+                    .castling_rights
+                    .without_color(self.hash, source_piece.color());
+
+                self.hash = self.pieces.set(self.hash, mv.source, None);
+                self.hash = self
+                    .pieces
+                    .set(self.hash, mv.destination, Some(source_piece));
+                self.hash =
+                    self.pieces
+                        .set(self.hash, Square::at(BoardFile::A, mv.source.rank()), None);
+                self.hash = self.pieces.set(
+                    self.hash,
                     Square::at(BoardFile::D, mv.source.rank()),
                     Some(Piece::new(PieceKind::Rook, source_piece.color())),
                 );
             }
             (PieceKind::King, _, (2, _), _) => {
                 // Short
-                *self.castling_rights_for_color_mut(source_piece.color()) = CastlingRights::none();
-                self.castling_rights_for_color_mut(source_piece.color())
-                    .queenside = false;
-                self.castling_rights_for_color_mut(source_piece.color())
-                    .kingside = false;
-                self.pieces.set(mv.source, None);
-                self.pieces.set(mv.destination, Some(source_piece));
-                self.pieces
-                    .set(Square::at(BoardFile::H, mv.source.rank()), None);
-                self.pieces.set(
+                (self.hash, self.castling_rights) = self
+                    .castling_rights
+                    .without_color(self.hash, source_piece.color());
+
+                self.hash = self.pieces.set(self.hash, mv.source, None);
+                self.hash = self
+                    .pieces
+                    .set(self.hash, mv.destination, Some(source_piece));
+                self.hash =
+                    self.pieces
+                        .set(self.hash, Square::at(BoardFile::H, mv.source.rank()), None);
+                self.hash = self.pieces.set(
+                    self.hash,
                     Square::at(BoardFile::F, mv.source.rank()),
                     Some(Piece::new(PieceKind::Rook, source_piece.color())),
                 );
@@ -346,41 +365,53 @@ impl Board {
                     // SAFETY: if dy.abs() == 2, then there is a rank between the source and destination rank.
                     //     Subtracting dy / 2 from the destination rank gets that rank.
                     unsafe {
-                        self.en_passant_destination = Some(Square::at(
+                        let new_destination = Square::at(
                             mv.destination.file(),
                             BoardRank::from_u8_unchecked(
                                 (mv.destination.rank().as_u8() as i32 - (dy / 2)) as u8,
                             ),
-                        ));
+                        );
+                        self.hash = self.hash.set_en_passant_file(
+                            self.en_passant_destination.map(|s| s.file()),
+                            Some(new_destination.file()),
+                        );
+                        self.en_passant_destination = Some(new_destination);
                     }
                 }
 
-                self.pieces.set(mv.source, None);
-                self.pieces.set(mv.destination, Some(source_piece));
+                self.hash = self.pieces.set(self.hash, mv.source, None);
+                self.hash = self
+                    .pieces
+                    .set(self.hash, mv.destination, Some(source_piece));
             }
             _ => {
-                self.pieces.set(mv.source, None);
-                self.pieces.set(mv.destination, Some(source_piece));
+                self.hash = self.pieces.set(self.hash, mv.source, None);
+                self.hash = self
+                    .pieces
+                    .set(self.hash, mv.destination, Some(source_piece));
 
                 // Void castling rights if moving king or rooks.
                 match source_piece.kind() {
                     PieceKind::King => {
-                        *self.castling_rights_for_color_mut(source_piece.color()) =
-                            CastlingRights::none();
+                        (self.hash, self.castling_rights) = self
+                            .castling_rights
+                            .without_color(self.hash, source_piece.color());
                     }
                     PieceKind::Rook
                         if mv.source
                             == Square::at(BoardFile::H, source_piece.color().back_rank()) =>
                     {
-                        self.castling_rights_for_color_mut(source_piece.color())
-                            .kingside = false;
+                        (self.hash, self.castling_rights) = self
+                            .castling_rights
+                            .without_kingside(self.hash, source_piece.color());
                     }
                     PieceKind::Rook
                         if mv.source
                             == Square::at(BoardFile::A, source_piece.color().back_rank()) =>
                     {
-                        self.castling_rights_for_color_mut(source_piece.color())
-                            .queenside = false;
+                        (self.hash, self.castling_rights) = self
+                            .castling_rights
+                            .without_queenside(self.hash, source_piece.color());
                     }
                     _ => {}
                 }
@@ -392,6 +423,7 @@ impl Board {
             self.halfmoves_since_event = 0;
         }
 
+        self.hash = self.hash.toggle_move();
         self.color_to_move = !self.color_to_move;
         if self.color_to_move == Color::White {
             self.fullmoves += 1;
@@ -403,60 +435,87 @@ impl Board {
     pub fn unmake_last_move(&mut self, um: UnmakeInfo) {
         let dx = um.destination.file().as_u8() as i32 - um.source.file().as_u8() as i32;
 
+        self.hash = self.hash.toggle_move();
         self.color_to_move = !self.color_to_move;
         self.halfmoves_since_event = um.old_halfmoves_since_event;
         if self.color_to_move == Color::Black {
             self.fullmoves -= 1;
         }
+        self.hash = self.hash.set_en_passant_file(
+            self.en_passant_destination.map(|s| s.file()),
+            um.old_en_passant_destination.map(|s| s.file()),
+        );
         self.en_passant_destination = um.old_en_passant_destination;
-        *self.castling_rights_for_color_mut(self.color_to_move) = um.old_castling_rights;
+
+        self.hash = self
+            .hash
+            .update_castling_rights(self.castling_rights, um.old_castling_rights);
+        self.castling_rights = um.old_castling_rights;
 
         // Don't need to handle promotion or leap
         match (um.piece, um.destination.rank(), dx) {
             (PieceKind::Pawn, _, _) if Some(um.destination) == um.old_en_passant_destination => {
                 // En Passant
-                self.pieces.set(um.destination, None);
-                self.pieces
-                    .set(um.source, Some(Piece::new(um.piece, self.color_to_move)));
+                self.hash = self.pieces.set(self.hash, um.destination, None);
+                self.hash = self.pieces.set(
+                    self.hash,
+                    um.source,
+                    Some(Piece::new(um.piece, self.color_to_move)),
+                );
 
-                self.pieces.set(
+                self.hash = self.pieces.set(
+                    self.hash,
                     Square::at(um.destination.file(), um.source.rank()),
                     Some(Piece::new(PieceKind::Pawn, !self.color_to_move)),
                 );
             }
             (PieceKind::King, _, -2) => {
                 // Long castle
-                self.pieces.set(um.destination, None);
-                self.pieces
-                    .set(um.source, Some(Piece::new(um.piece, self.color_to_move)));
+                self.hash = self.pieces.set(self.hash, um.destination, None);
+                self.hash = self.pieces.set(
+                    self.hash,
+                    um.source,
+                    Some(Piece::new(um.piece, self.color_to_move)),
+                );
 
-                self.pieces
-                    .set(Square::at(BoardFile::D, um.source.rank()), None);
-                self.pieces.set(
+                self.hash =
+                    self.pieces
+                        .set(self.hash, Square::at(BoardFile::D, um.source.rank()), None);
+                self.hash = self.pieces.set(
+                    self.hash,
                     Square::at(BoardFile::A, um.source.rank()),
                     Some(Piece::new(PieceKind::Rook, self.color_to_move)),
                 );
             }
             (PieceKind::King, _, 2) => {
                 // Short castle
-                self.pieces.set(um.destination, None);
-                self.pieces
-                    .set(um.source, Some(Piece::new(um.piece, self.color_to_move)));
+                self.hash = self.pieces.set(self.hash, um.destination, None);
+                self.hash = self.pieces.set(
+                    self.hash,
+                    um.source,
+                    Some(Piece::new(um.piece, self.color_to_move)),
+                );
 
-                self.pieces
-                    .set(Square::at(BoardFile::F, um.source.rank()), None);
-                self.pieces.set(
+                self.hash =
+                    self.pieces
+                        .set(self.hash, Square::at(BoardFile::F, um.source.rank()), None);
+                self.hash = self.pieces.set(
+                    self.hash,
                     Square::at(BoardFile::H, um.source.rank()),
                     Some(Piece::new(PieceKind::Rook, self.color_to_move)),
                 );
             }
             _ => {
-                self.pieces.set(
+                self.hash = self.pieces.set(
+                    self.hash,
                     um.destination,
                     um.captured.map(|k| Piece::new(k, !self.color_to_move)),
                 );
-                self.pieces
-                    .set(um.source, Some(Piece::new(um.piece, self.color_to_move)));
+                self.hash = self.pieces.set(
+                    self.hash,
+                    um.source,
+                    Some(Piece::new(um.piece, self.color_to_move)),
+                );
             }
         };
     }
@@ -473,36 +532,105 @@ impl Board {
         self.en_passant_destination
     }
 
-    pub fn white_castling_rights(&self) -> CastlingRights {
-        self.white_castling_rights
-    }
-
-    pub fn black_castling_rights(&self) -> CastlingRights {
-        self.black_castling_rights
+    pub fn castling_rights(&self) -> CastlingRights {
+        self.castling_rights
     }
 }
 
+// From least to most significant:
+// - White queenside
+// - White kingside
+// - Black queenside
+// - Black kingside
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct CastlingRights {
-    pub kingside: bool,
-    pub queenside: bool,
-}
+pub struct CastlingRights(u8);
 
 impl CastlingRights {
     pub fn none() -> CastlingRights {
-        CastlingRights {
-            kingside: false,
-            queenside: false,
+        CastlingRights(0)
+    }
+
+    pub fn all() -> CastlingRights {
+        CastlingRights(0b00001111)
+    }
+
+    pub fn new(
+        white_queenside: bool,
+        white_kingside: bool,
+        black_queenside: bool,
+        black_kingside: bool,
+    ) -> CastlingRights {
+        let mut val = 0u8;
+        if white_queenside {
+            val |= 0b1;
         }
+        if white_kingside {
+            val |= 0b10;
+        }
+        if black_queenside {
+            val |= 0b100;
+        }
+        if black_kingside {
+            val |= 0b1000;
+        }
+
+        CastlingRights(val)
+    }
+
+    pub fn queenside(self, color: Color) -> bool {
+        if color.is_white() {
+            (self.0 & 0b0001) != 0
+        } else {
+            (self.0 & 0b0100) != 0
+        }
+    }
+
+    pub fn kingside(self, color: Color) -> bool {
+        if color.is_white() {
+            (self.0 & 0b0010) != 0
+        } else {
+            (self.0 & 0b1000) != 0
+        }
+    }
+
+    pub fn without_color(self, hash: BoardHash, color: Color) -> (BoardHash, CastlingRights) {
+        if color.is_white() {
+            let new_rights = CastlingRights(self.0 & 0b11111100);
+            (hash.update_castling_rights(self, new_rights), new_rights)
+        } else {
+            let new_rights = CastlingRights(self.0 & 0b11110011);
+            (hash.update_castling_rights(self, new_rights), new_rights)
+        }
+    }
+
+    pub fn without_kingside(self, hash: BoardHash, color: Color) -> (BoardHash, CastlingRights) {
+        if color.is_white() {
+            let new_rights = CastlingRights(self.0 & 0b11111101);
+            (hash.update_castling_rights(self, new_rights), new_rights)
+        } else {
+            let new_rights = CastlingRights(self.0 & 0b11110111);
+            (hash.update_castling_rights(self, new_rights), new_rights)
+        }
+    }
+
+    pub fn without_queenside(self, hash: BoardHash, color: Color) -> (BoardHash, CastlingRights) {
+        if color.is_white() {
+            let new_rights = CastlingRights(self.0 & 0b11111110);
+            (hash.update_castling_rights(self, new_rights), new_rights)
+        } else {
+            let new_rights = CastlingRights(self.0 & 0b11111011);
+            (hash.update_castling_rights(self, new_rights), new_rights)
+        }
+    }
+
+    pub const fn as_u8(&self) -> u8 {
+        self.0
     }
 }
 
 impl Default for CastlingRights {
     fn default() -> Self {
-        Self {
-            kingside: true,
-            queenside: true,
-        }
+        CastlingRights::all()
     }
 }
 
@@ -516,7 +644,7 @@ pub struct UnmakeInfo {
     pub captured: Option<PieceKind>,
     pub old_en_passant_destination: Option<Square>,
     pub old_castling_rights: CastlingRights,
-    pub old_halfmoves_since_event: usize,
+    pub old_halfmoves_since_event: u32,
 }
 
 #[cfg(test)]
@@ -531,12 +659,23 @@ mod tests {
 
     fn test_move_and_unmake(fen_before: &str, mv: Move, fen_after: &str) {
         let mut board = Board::from_fen(fen_before).unwrap();
+        let initial_board = board.clone();
 
         let unmake = board.make_move(mv);
         assert_eq!(board.to_fen(), fen_after, "Making the move");
 
         board.unmake_last_move(unmake);
         assert_eq!(board.to_fen(), fen_before, "Unmaking the move");
+
+        assert_eq!(
+            board.hash(),
+            initial_board.hash(),
+            "Checking hash equality with initial board"
+        );
+        assert_eq!(
+            board, initial_board,
+            "Checking deep equality with initial board"
+        );
     }
 
     #[test]

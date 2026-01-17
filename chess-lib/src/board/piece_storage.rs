@@ -1,3 +1,4 @@
+use crate::board::hash::BoardHash;
 use crate::board::{Color, Piece, PieceKind, bitboard::Bitboard, square::Square};
 use strum::IntoEnumIterator;
 
@@ -25,19 +26,28 @@ impl PieceStorage {
         self.square_contents[sq.as_u8() as usize]
     }
 
-    pub const fn set(&mut self, sq: Square, contents: Option<Piece>) {
+    pub const fn set(
+        &mut self,
+        mut hash: BoardHash,
+        sq: Square,
+        contents: Option<Piece>,
+    ) -> BoardHash {
         // update old piece bitboard
         if let Some(piece) = self.get(sq) {
+            hash = hash.toggle_piece(piece, sq);
             self.piece_bitboards[piece.as_u8() as usize].remove(sq);
         }
 
         // update new piece bitboard
         if let Some(piece) = contents {
+            hash = hash.toggle_piece(piece, sq);
             self.piece_bitboards[piece.as_u8() as usize].insert(sq);
         }
 
         // update square contents
         self.square_contents[sq.as_u8() as usize] = contents;
+
+        hash
     }
 
     pub fn iter(&self) -> impl Iterator<Item = (Square, Piece)> {

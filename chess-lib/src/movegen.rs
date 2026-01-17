@@ -263,7 +263,7 @@ pub fn compute_legal_moves(moves: &mut MoveList, board: &Board) {
     }
 
     // Consider castling.
-    let castling_rights = board.castling_rights_for_color(board.color_to_move());
+    let castling_rights = board.castling_rights();
     let back_rank = board.color_to_move().back_rank();
 
     // Squares that must be empty and safe in order to kingside castle.
@@ -280,7 +280,7 @@ pub fn compute_legal_moves(moves: &mut MoveList, board: &Board) {
         .with_inserted(Square::at(BoardFile::C, back_rank))
         .with_inserted(Square::at(BoardFile::D, back_rank));
 
-    if castling_rights.kingside
+    if castling_rights.kingside(board.color_to_move())
         && !kingside_castle_clear_mask
             .intersects(all_pieces_bitboard | checks_analysis.king_danger_mask)
         && !is_check
@@ -294,7 +294,7 @@ pub fn compute_legal_moves(moves: &mut MoveList, board: &Board) {
         })
     }
 
-    if castling_rights.queenside
+    if castling_rights.queenside(board.color_to_move())
         && !queenside_castle_clear_mask.intersects(all_pieces_bitboard)
         && !queenside_castle_danger_mask.intersects(checks_analysis.king_danger_mask)
         && !is_check

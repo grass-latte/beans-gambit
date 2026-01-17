@@ -114,6 +114,7 @@ version = "0.1.0"
 dependencies = [
  "derive-getters",
  "derive_more",
+ "get-random-const",
  "itertools",
  "log",
  "rand",
@@ -414,6 +415,15 @@ checksum = "85649ca51fd72272d7821adaf274ad91c288277713d9c18820d8499a7ff69e9a"
 dependencies = [
  "typenum",
  "version_check",
+]
+
+[[package]]
+name = "get-random-const"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1026f5dfa5bcff6743033629e1de9f7cdcec4a013d4da2109edf911b73d93c7c"
+dependencies = [
+ "getrandom",
 ]
 
 [[package]]
