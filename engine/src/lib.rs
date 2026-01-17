@@ -22,6 +22,12 @@ pub struct InterMoveCache {
     saved_positions: HashMap<BoardHash, HashData>,
 }
 
+impl Default for InterMoveCache {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl InterMoveCache {
     pub fn new() -> InterMoveCache {
         InterMoveCache {
