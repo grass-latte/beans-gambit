@@ -6,9 +6,9 @@ mod piece;
 mod piece_storage;
 mod square;
 
-use crate::board::hash::BoardHash;
 pub use bitboard::*;
 pub use color::*;
+pub use hash::*;
 pub use mv::*;
 pub use piece::*;
 pub use piece_storage::*;

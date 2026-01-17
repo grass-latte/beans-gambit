@@ -1,10 +1,6 @@
 use crate::board::{BoardFile, CastlingRights, Piece, Square};
 use get_random_const::random;
 
-struct Dummy {
-    a: i32,
-}
-
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub struct BoardHash(u64);
 
