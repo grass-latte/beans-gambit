@@ -8,8 +8,9 @@ use crate::heatmaps::{
 };
 use chess_lib::board::{Board, BoardHash, Move, PieceKind, Square};
 use chess_lib::movegen::{MoveList, compute_legal_moves};
+use lru::LruCache;
 use rand::rng;
-use std::collections::HashMap;
+use std::num::NonZeroUsize;
 
 pub const fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
@@ -19,7 +20,7 @@ type HashData = (usize, f32);
 pub struct InterMoveCache {
     // (depth searched, eval)
     // Evals from perspective of white
-    saved_positions: HashMap<BoardHash, HashData>,
+    saved_positions: LruCache<BoardHash, HashData>,
 }
 
 impl Default for InterMoveCache {
@@ -31,8 +32,10 @@ impl Default for InterMoveCache {
 impl InterMoveCache {
     pub fn new() -> InterMoveCache {
         InterMoveCache {
-            // 4 GB
-            saved_positions: HashMap::with_capacity(4_000_000_000 / size_of::<HashData>()),
+            // 8 GB
+            saved_positions: LruCache::new(
+                NonZeroUsize::try_from(8_000_000_000 / size_of::<HashData>()).unwrap(),
+            ),
         }
     }
 }
@@ -146,7 +149,7 @@ pub fn minimax(
     };
     cache
         .saved_positions
-        .insert(board.hash(), (depth_remaining, best_white_eval));
+        .push(board.hash(), (depth_remaining, best_white_eval));
 
     best_eval
 }

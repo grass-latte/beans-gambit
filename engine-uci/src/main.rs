@@ -14,9 +14,11 @@ use log::{debug, error, info, warn};
 use std::borrow::Borrow;
 use std::fs::File;
 use std::io::{BufRead, Write};
+use std::ops::DerefMut;
 use std::process::exit;
 use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use std::{io, thread};
 use strum::IntoEnumIterator;
@@ -80,6 +82,7 @@ fn main() {
     let mut debug = false;
     let mut state = UciState::new();
     let mut board = Board::starting();
+    let cache = Arc::new(Mutex::new(InterMoveCache::new()));
 
     println!(
         "Beans Gambit UCI v{} [Bot v{} | Chess Lib v{}]",
@@ -135,7 +138,8 @@ fn main() {
                 todo!()
             }
             UciMessage::UciNewGame => {
-                // TODO (no internal state to reset yet)
+                // TODO
+                *cache.lock().unwrap() = InterMoveCache::new();
             }
             UciMessage::Position {
                 startpos,
@@ -163,8 +167,10 @@ fn main() {
 
                 RUNNING.store(true, Ordering::Release);
 
+                let cache = cache.clone();
                 thread::spawn(move || {
-                    let mut c = InterMoveCache::new();
+                    let cache = cache;
+                    let mut c = cache.lock().unwrap();
                     let mut board = board;
                     let result =
                         search(&mut board, &mut c, || SHOULD_STOP.load(Ordering::Acquire)).unwrap();
