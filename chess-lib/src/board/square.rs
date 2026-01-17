@@ -253,6 +253,12 @@ impl BoardRank {
         }
     }
 
+    pub const fn flipped(self) -> BoardRank {
+        debug_assert!(7 - self.as_u8() < 8);
+        // SAFETY: 7 - (0..=7) results in 0..=7
+        unsafe { BoardRank::from_u8_unchecked(7 - self.as_u8()) }
+    }
+
     pub const fn as_u8(self) -> u8 {
         self as u8
     }

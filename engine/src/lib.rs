@@ -1,7 +1,12 @@
 #![allow(dead_code)]
 #![allow(unused)]
 
-use chess_lib::board::{Board, BoardHash, Move, PieceKind};
+mod heatmaps;
+
+use crate::heatmaps::{
+    BISHOP_HEATMAP, KING_HEATMAP, KNIGHT_HEATMAP, PAWN_HEATMAP, QUEEN_HEATMAP, ROOK_HEATMAP,
+};
+use chess_lib::board::{Board, BoardHash, Move, PieceKind, Square};
 use chess_lib::movegen::{MoveList, compute_legal_moves};
 use rand::rng;
 use std::collections::HashMap;
@@ -10,16 +15,18 @@ pub const fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
 }
 
+type HashData = (usize, f32);
 pub struct InterMoveCache {
     // (depth searched, eval)
     // Evals from perspective of white
-    saved_positions: HashMap<BoardHash, (usize, f32)>,
+    saved_positions: HashMap<BoardHash, HashData>,
 }
 
 impl InterMoveCache {
     pub fn new() -> InterMoveCache {
         InterMoveCache {
-            saved_positions: HashMap::new(),
+            // 4 GB
+            saved_positions: HashMap::with_capacity(4_000_000_000 / size_of::<HashData>()),
         }
     }
 }
@@ -29,14 +36,20 @@ pub fn eval(board: &Board) -> f32 {
 
     let mut score = 0f32;
 
-    for (_, piece) in board.pieces().iter() {
+    for (position, piece) in board.pieces().iter() {
+        let position = if piece.color().is_white() {
+            position.as_u8()
+        } else {
+            Square::at(position.file(), position.rank().flipped()).as_u8()
+        };
+
         let mut s = match piece.kind() {
-            PieceKind::Pawn => 1.0,
-            PieceKind::Knight => 3.0,
-            PieceKind::Bishop => 3.5,
-            PieceKind::Rook => 5.0,
-            PieceKind::Queen => 8.0,
-            PieceKind::King => 0.0,
+            PieceKind::Pawn => 1.0 + PAWN_HEATMAP[position as usize],
+            PieceKind::Knight => 3.0 + KNIGHT_HEATMAP[position as usize],
+            PieceKind::Bishop => 3.5 + BISHOP_HEATMAP[position as usize],
+            PieceKind::Rook => 5.0 + ROOK_HEATMAP[position as usize],
+            PieceKind::Queen => 8.0 + QUEEN_HEATMAP[position as usize],
+            PieceKind::King => 0.0 + KING_HEATMAP[position as usize],
         };
 
         if piece.color() != color_to_move {
@@ -61,7 +74,7 @@ pub fn minimax(
 
     if let Some((depth_searched, white_score)) = cache.saved_positions.get(&board.hash()) {
         if *depth_searched < depth_remaining {
-            // Will be replaced by deeper search later
+            // Will be replaced by deeper search
         } else if board.color_to_move().is_white() {
             return *white_score;
         } else {
@@ -125,7 +138,6 @@ pub fn minimax(
     } else {
         -best_eval
     };
-
     cache
         .saved_positions
         .insert(board.hash(), (depth_remaining, best_white_eval));
