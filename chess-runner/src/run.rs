@@ -1,9 +1,9 @@
-use std::io::{BufRead, BufReader};
 use crate::setup::{BotVsBotOptions, ChessBot, ChessOptions, MatchType, PerformanceOptions};
 use color_print::{cformat, cprintln};
 use itertools::Itertools;
+use std::io::{BufRead, BufReader, Write};
 use std::path::PathBuf;
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::str::FromStr;
 
 #[allow(unused)]
@@ -119,7 +119,7 @@ fn send_ctrl_c(pid: u32) {
 
 fn performance(bot: ChessBot, options: &PerformanceOptions) {
     let mut command = Command::new("flamegraph");
-    let command = command.arg("--").arg(bot.path);
+    let command = command.arg("--").arg(bot.path).stdin(Stdio::piped()).stdout(Stdio::piped());
 
     cprintln!(
         "<c>Args: {}</>",
@@ -130,17 +130,58 @@ fn performance(bot: ChessBot, options: &PerformanceOptions) {
             .join(" ")
     );
 
-    let Ok(status) = command.status() else {
-        panic!("{}", cformat!("<r,bold>Failed to run flamegraph</>"));
+    #[cfg(windows)]
+    {
+        use windows_sys::Win32::System::Threading::CREATE_NEW_PROCESS_GROUP;
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(CREATE_NEW_PROCESS_GROUP);
+    }
+
+    let Ok(mut child) = command.spawn() else {
+        panic!("{}", cformat!("<r,bold>Failed to run flamegraph on binary</>"));
     };
 
-    if status.success() {
-        cprintln!("<g,bold>Tool ran successfully!</>");
-    } else {
-        panic!(
-            "{}",
-            cformat!("<r,bold>flamegraph exited with code: {:?}</>", status.code())
-        );
+    let pid = child.id();
+    let mut stdin = child.stdin.take().unwrap();
+    let stdout = child.stdout.take().unwrap();
+    let mut reader = BufReader::new(stdout);
+
+    println!("Performing UCI handshake");
+
+    print!("1: uci");
+    writeln!(stdin, "uci").unwrap();
+    stdin.flush().unwrap();
+    wait_for(&mut reader, "uciok");
+
+    print!("\r2: isready");
+    writeln!(stdin, "isready").unwrap();
+    stdin.flush().unwrap();
+    wait_for(&mut reader, "readyok");
+
+    print!("\r3: ucinewgame");
+    writeln!(stdin, "ucinewgame").unwrap();
+    stdin.flush().unwrap();
+
+    let uci_cmd = format!("position fen {}", options.fen);
+    print!("\r4: {}", &uci_cmd);
+    writeln!(stdin, "{}", uci_cmd).unwrap();
+    stdin.flush().unwrap();
+
+    println!("\nStarting search: go wtime 300000 btime 300000 movestogo 40");
+    writeln!(stdin, "go wtime 300000 btime 300000 movestogo 40").unwrap();
+    stdin.flush().unwrap();
+    
+    wait_for(&mut reader, "bestmove");
+
+    println!("Search complete");
+
+    send_ctrl_c(pid);
+
+    let _ = child.wait();
+
+    println!("Opening flamegraph...");
+    if let Err(e) = open::that("flamegraph.svg") {
+        cprintln!("<r,bold>Failed to open flamegraph: {e:?}</>")
     }
 }
 

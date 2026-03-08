@@ -19,7 +19,7 @@ strum = "0.27.2"
 strum_macros = "0.27.2"
 which = "8.0.0"
 either = "1.15.0"
-cfg-if = "1"
+open = "5.3.3"
 
 [target.'cfg(unix)'.dependencies]
 nix = { version = "0.31.2", features = ["signal"] }
