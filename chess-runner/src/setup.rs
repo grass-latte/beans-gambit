@@ -10,6 +10,7 @@ use std::str::FromStr;
 use std::sync::LazyLock;
 use strum::{EnumCount, IntoEnumIterator};
 use strum_macros::{Display, EnumCount, EnumIter, EnumString};
+use chess_lib::board::Board;
 
 pub struct BotVsBotOptions {
     pub games: usize,
@@ -17,13 +18,27 @@ pub struct BotVsBotOptions {
 
 impl Default for BotVsBotOptions {
     fn default() -> Self {
-        BotVsBotOptions { games: 1 }
+        BotVsBotOptions { games: 5 }
     }
 }
+
+pub struct PerformanceOptions {
+    pub fen: String,
+}
+
+impl Default for PerformanceOptions {
+    fn default() -> Self {
+        PerformanceOptions {
+            fen: String::from("r2q1rk1/ppp2ppp/2npbn2/3Np3/2P1P3/2N1BP2/PP3P1P/R2QKB1R w KQ - 0 10"),
+        }
+    }
+}
+
 
 pub enum MatchType {
     BotVsBot(BotVsBotOptions),
     Compliance,
+    Performance(PerformanceOptions),
     BuildOnly,
     BuildAndRun,
 }
@@ -38,7 +53,7 @@ impl MatchType {
             .unwrap();
 
         if selection == 0 {
-            MatchType::BotVsBot(BotVsBotOptions { games: 5 })
+            MatchType::BotVsBot(BotVsBotOptions::default())
         } else {
             let i = Input::with_theme(&ColorfulTheme::default())
                 .with_prompt("Enter number of games (1-1000)")
@@ -57,6 +72,31 @@ impl MatchType {
             })
         }
     }
+
+    pub fn setup_performance() -> MatchType {
+        let selection = Select::with_theme(&ColorfulTheme::default())
+            .with_prompt("Configure Performance Test")
+            .items(vec!["Default Game", "Custom Fen"])
+            .default(0)
+            .interact()
+            .unwrap();
+
+        if selection == 0 {
+            MatchType::Performance(PerformanceOptions::default())
+        } else {
+            let i = Input::with_theme(&ColorfulTheme::default())
+                .with_prompt("Enter FEN: ")
+                .validate_with(|i: &String| {
+                    Board::from_fen(i).map(|_| ())
+                })
+                .interact()
+                .unwrap();
+
+            MatchType::Performance(PerformanceOptions {
+                fen: i,
+            })
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, EnumIter, EnumString, Display)]
@@ -65,6 +105,8 @@ pub enum SimpleMatchType {
     BotVsBot,
     #[strum(serialize = "Compliance")]
     Compliance,
+    #[strum(serialize = "Performance (Flamegraph)")]
+    Performance,
     #[strum(serialize = "Build Only")]
     BuildOnly,
     #[strum(serialize = "Build and Run")]
@@ -76,6 +118,7 @@ impl SimpleMatchType {
         match &self {
             SimpleMatchType::BotVsBot => 2,
             SimpleMatchType::Compliance => 1,
+            SimpleMatchType::Performance => 1,
             SimpleMatchType::BuildOnly => 1,
             SimpleMatchType::BuildAndRun => 1,
         }
@@ -85,6 +128,7 @@ impl SimpleMatchType {
         match &self {
             SimpleMatchType::BotVsBot => MatchType::setup_bot_vs_bot(),
             SimpleMatchType::Compliance => MatchType::Compliance,
+            SimpleMatchType::Performance => MatchType::setup_performance(),
             SimpleMatchType::BuildOnly => MatchType::BuildOnly,
             SimpleMatchType::BuildAndRun => MatchType::BuildAndRun,
         }
@@ -202,4 +246,14 @@ pub fn select_options() -> (ChessOptions, Vec<Either<LocalBot, String>>) {
     }
 
     (ChessOptions::new(selection.complete_setup()), bots)
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn check_valid_default_fen() {
+        Board::from_fen(&PerformanceOptions::default().fen).unwrap();
+    }
 }

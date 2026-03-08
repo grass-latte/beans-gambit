@@ -134,6 +134,7 @@ dependencies = [
 name = "chess-runner"
 version = "0.1.0"
 dependencies = [
+ "chess-lib",
  "color-print",
  "derive-getters",
  "derive-new",

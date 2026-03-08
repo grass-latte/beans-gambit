@@ -11,3 +11,6 @@ game.pgn
 flake.lock
 
 versions/
+
+flamegraph.svg
+perf.data

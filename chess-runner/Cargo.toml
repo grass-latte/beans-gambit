@@ -6,6 +6,8 @@ edition = "2024"
 default-run = "chess-runner"
 
 [dependencies]
+chess-lib = { path = "../chess-lib" }
+
 color-print = "0.3.7"
 derive-getters = "0.5.0"
 derive-new = "0.7.0"
@@ -17,3 +19,13 @@ strum = "0.27.2"
 strum_macros = "0.27.2"
 which = "8.0.0"
 either = "1.15.0"
+cfg-if = "1"
+
+[target.'cfg(unix)'.dependencies]
+nix = { version = "0.31.2", features = ["signal"] }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61.2", features = [
+    "Win32_System_Console",
+    "Win32_System_Threading"
+]}
