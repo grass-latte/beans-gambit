@@ -121,7 +121,11 @@ fn wait_for(reader: &mut BufReader<std::process::ChildStdout>, token: &str) {
 
 fn performance(bot: ChessBot, options: &PerformanceOptions) {
     let mut command = Command::new("flamegraph");
-    let command = command.arg("--").arg(bot.path).stdin(Stdio::piped()).stdout(Stdio::piped());
+    let command = command
+        .arg("--")
+        .arg(bot.path)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped());
 
     cprintln!(
         "<c>Flamegraph args: {}</>",
@@ -134,13 +138,16 @@ fn performance(bot: ChessBot, options: &PerformanceOptions) {
 
     #[cfg(windows)]
     {
-        use windows_sys::Win32::System::Threading::CREATE_NEW_PROCESS_GROUP;
         use std::os::windows::process::CommandExt;
+        use windows_sys::Win32::System::Threading::CREATE_NEW_PROCESS_GROUP;
         command.creation_flags(CREATE_NEW_PROCESS_GROUP);
     }
 
     let Ok(mut child) = command.spawn() else {
-        panic!("{}", cformat!("<r,bold>Failed to run flamegraph on binary</>"));
+        panic!(
+            "{}",
+            cformat!("<r,bold>Failed to run flamegraph on binary</>")
+        );
     };
 
     // let pid = child.id();
@@ -172,7 +179,7 @@ fn performance(bot: ChessBot, options: &PerformanceOptions) {
     println!("\nStarting search: go wtime 300000 btime 300000 movestogo 40");
     writeln!(stdin, "go wtime 300000 btime 300000 movestogo 40").unwrap();
     stdin.flush().unwrap();
-    
+
     wait_for(&mut reader, "bestmove");
 
     println!("Search complete, sending quit");

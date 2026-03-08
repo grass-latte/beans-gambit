@@ -3,15 +3,17 @@
 
 mod constant_heuristics;
 
+use crate::constant_heuristics::pieces::{
+    BISHOP_VALUE, KNIGHT_VALUE, PAWN_VALUE, QUEEN_VALUE, ROOK_VALUE,
+};
+use chess_lib::board::{Board, BoardHash, Move, PieceKind, Square};
+use chess_lib::movegen::{MoveList, compute_legal_moves};
 use constant_heuristics::heatmaps::{
     BISHOP_HEATMAP, KING_HEATMAP, KNIGHT_HEATMAP, PAWN_HEATMAP, QUEEN_HEATMAP, ROOK_HEATMAP,
 };
-use chess_lib::board::{Board, BoardHash, Move, PieceKind, Square};
-use chess_lib::movegen::{compute_legal_moves, MoveList};
 use lru::LruCache;
 use rand::rng;
 use std::num::NonZeroUsize;
-use crate::constant_heuristics::pieces::{BISHOP_VALUE, KNIGHT_VALUE, PAWN_VALUE, QUEEN_VALUE, ROOK_VALUE};
 
 pub const fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")

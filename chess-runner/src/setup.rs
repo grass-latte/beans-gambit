@@ -1,3 +1,4 @@
+use chess_lib::board::Board;
 use color_print::cprintln;
 use derive_getters::Getters;
 use derive_new::new;
@@ -10,7 +11,6 @@ use std::str::FromStr;
 use std::sync::LazyLock;
 use strum::{EnumCount, IntoEnumIterator};
 use strum_macros::{Display, EnumCount, EnumIter, EnumString};
-use chess_lib::board::Board;
 
 pub struct BotVsBotOptions {
     pub games: usize,
@@ -29,11 +29,12 @@ pub struct PerformanceOptions {
 impl Default for PerformanceOptions {
     fn default() -> Self {
         PerformanceOptions {
-            fen: String::from("r2q1rk1/ppp2ppp/2npbn2/3Np3/2P1P3/2N1BP2/PP3P1P/R2QKB1R w KQ - 0 10"),
+            fen: String::from(
+                "r2q1rk1/ppp2ppp/2npbn2/3Np3/2P1P3/2N1BP2/PP3P1P/R2QKB1R w KQ - 0 10",
+            ),
         }
     }
 }
-
 
 pub enum MatchType {
     BotVsBot(BotVsBotOptions),
@@ -86,15 +87,11 @@ impl MatchType {
         } else {
             let i = Input::with_theme(&ColorfulTheme::default())
                 .with_prompt("Enter FEN: ")
-                .validate_with(|i: &String| {
-                    Board::from_fen(i).map(|_| ())
-                })
+                .validate_with(|i: &String| Board::from_fen(i).map(|_| ()))
                 .interact()
                 .unwrap();
 
-            MatchType::Performance(PerformanceOptions {
-                fen: i,
-            })
+            MatchType::Performance(PerformanceOptions { fen: i })
         }
     }
 }
@@ -247,7 +244,6 @@ pub fn select_options() -> (ChessOptions, Vec<Either<LocalBot, String>>) {
 
     (ChessOptions::new(selection.complete_setup()), bots)
 }
-
 
 #[cfg(test)]
 mod tests {
