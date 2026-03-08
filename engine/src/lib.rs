@@ -160,7 +160,7 @@ pub fn search(
     cache: &mut InterMoveCache,
     stop_fn: fn() -> bool,
 ) -> Option<Move> {
-    const SEARCH_DEPTH: usize = 6;
+    const SEARCH_DEPTH: usize = 5;
 
     let mut rng = rng();
     let mut options = MoveList::new();

@@ -109,6 +109,10 @@ fn compile_directory(directory: PathBuf) -> PathBuf {
     } else {
         target_dir.join("release").join("engine-uci")
     };
+
+    #[cfg(windows)]
+    let exe_path = exe_path.with_extension("exe");
+
     if !exe_path.is_file() {
         panic!(
             "{}",

@@ -99,30 +99,32 @@ fn wait_for(reader: &mut BufReader<std::process::ChildStdout>, token: &str) {
     }
 }
 
-#[cfg(unix)]
-fn send_ctrl_c(pid: u32) {
-    use nix::sys::signal::{kill, Signal};
-    use nix::unistd::Pid;
-
-    kill(Pid::from_raw(pid as i32), Signal::SIGINT).unwrap();
-}
-
-#[cfg(windows)]
-fn send_ctrl_c(pid: u32) {
-    use windows_sys::Win32::System::Console::GenerateConsoleCtrlEvent;
-    use windows_sys::Win32::System::Console::CTRL_C_EVENT;
-
-    unsafe {
-        GenerateConsoleCtrlEvent(CTRL_C_EVENT, pid);
-    }
-}
+// #[cfg(unix)]
+// fn send_ctrl_c(pid: u32) {
+//     use nix::sys::signal::{kill, Signal};
+//     use nix::unistd::Pid;
+//
+//     kill(Pid::from_raw(pid as i32), Signal::SIGINT).unwrap();
+// }
+//
+// #[cfg(windows)]
+// fn send_ctrl_c(pgid: u32) {
+//     use windows_sys::Win32::System::Console::GenerateConsoleCtrlEvent;
+//     use windows_sys::Win32::System::Console::CTRL_C_EVENT;
+//     use windows_sys::Win32::System::Console::CTRL_BREAK_EVENT;
+//
+//     let ok = unsafe { GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, pgid) };
+//     if ok == 0 {
+//         eprintln!("GenerateConsoleCtrlEvent failed");
+//     }
+// }
 
 fn performance(bot: ChessBot, options: &PerformanceOptions) {
     let mut command = Command::new("flamegraph");
     let command = command.arg("--").arg(bot.path).stdin(Stdio::piped()).stdout(Stdio::piped());
 
     cprintln!(
-        "<c>Args: {}</>",
+        "<c>Flamegraph args: {}</>",
         command
             .get_args()
             .map(|s| s.to_string_lossy())
@@ -134,14 +136,14 @@ fn performance(bot: ChessBot, options: &PerformanceOptions) {
     {
         use windows_sys::Win32::System::Threading::CREATE_NEW_PROCESS_GROUP;
         use std::os::windows::process::CommandExt;
-        cmd.creation_flags(CREATE_NEW_PROCESS_GROUP);
+        command.creation_flags(CREATE_NEW_PROCESS_GROUP);
     }
 
     let Ok(mut child) = command.spawn() else {
         panic!("{}", cformat!("<r,bold>Failed to run flamegraph on binary</>"));
     };
 
-    let pid = child.id();
+    // let pid = child.id();
     let mut stdin = child.stdin.take().unwrap();
     let stdout = child.stdout.take().unwrap();
     let mut reader = BufReader::new(stdout);
@@ -173,10 +175,11 @@ fn performance(bot: ChessBot, options: &PerformanceOptions) {
     
     wait_for(&mut reader, "bestmove");
 
-    println!("Search complete");
+    println!("Search complete, sending quit");
+    writeln!(stdin, "quit").unwrap();
+    stdin.flush().unwrap();
 
-    send_ctrl_c(pid);
-
+    println!("Waiting for exit");
     let _ = child.wait();
 
     println!("Opening flamegraph...");
