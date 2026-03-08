@@ -249,6 +249,7 @@ pub fn select_options() -> (ChessOptions, Vec<Either<LocalBot, String>>) {
 mod tests {
     use super::*;
 
+    #[test]
     fn check_valid_default_fen() {
         Board::from_fen(&PerformanceOptions::default().fen).unwrap();
     }
