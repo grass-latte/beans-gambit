@@ -1,13 +1,13 @@
-mod minimax_result;
-
-use crate::InterMoveCache;
 use crate::eval::eval;
 use crate::minimax::TimeManagementStrat::StrictLimit;
-use crate::minimax::minimax_result::MinimaxResult;
+use crate::results::{Score, SearchResult};
 use crate::tt::{TTEntry, TTEntryType};
+use crate::{InterMoveCache, results};
 use chess_lib::board::{Board, Move};
 use chess_lib::movegen::{MoveList, compute_legal_moves};
-use log::{info, log};
+use log::{debug, info, log};
+#[cfg(debug_assertions)]
+use std::backtrace::Backtrace;
 use std::cmp::PartialOrd;
 use std::time::{Duration, Instant};
 
@@ -31,22 +31,22 @@ fn minimax<F>(
     board: &mut Board,
     cache: &mut InterMoveCache,
     depth_remaining: usize,
-    prune: f32,
+    prune: Score,
     stop_fn: &F,
-) -> (MinimaxResult, MoveType)
+) -> (SearchResult, MoveType)
 where
     F: Fn() -> bool,
 {
     if board.halfmoves_since_event() >= 150 {
         // 75 move rule
-        return (MinimaxResult::poisoned(0f32), MoveType::Draw); // immediate draw
+        return (SearchResult::poisoned(Score::ZERO), MoveType::Draw); // immediate draw
     }
 
     let (score, mv) = minimax_inner(toplevel, board, cache, depth_remaining, prune, stop_fn);
 
-    if board.halfmoves_since_event() >= 100 && score.score <= 0f32 {
+    if board.halfmoves_since_event() >= 100 && score.score <= Score::ZERO {
         // Assume current player will choose draw if in a bad position
-        (MinimaxResult::poisoned(0f32), MoveType::Draw)
+        (SearchResult::poisoned(Score::ZERO), MoveType::Draw)
     } else {
         (score, mv)
     }
@@ -57,9 +57,9 @@ fn minimax_inner<F>(
     board: &mut Board,
     cache: &mut InterMoveCache,
     depth_remaining: usize,
-    prune: f32,
+    prune: Score,
     stop_fn: &F,
-) -> (MinimaxResult, MoveType)
+) -> (SearchResult, MoveType)
 where
     F: Fn() -> bool,
 {
@@ -67,11 +67,11 @@ where
         let score = eval(board);
 
         // Accept three-fold if position is bad
-        if board.is_threefold() && score < 0f32 {
-            return (MinimaxResult::poisoned(0f32), MoveType::Draw);
+        if board.is_threefold() && score < Score::ZERO {
+            return (SearchResult::poisoned(Score::ZERO), MoveType::Draw);
         }
 
-        return (MinimaxResult::normal(score), MoveType::Eval);
+        return (SearchResult::normal(score), MoveType::Eval);
     }
 
     // Force search if toplevel - probably not worth storing moves with evals to speed up
@@ -96,29 +96,32 @@ where
                 && hd.entry_type == TTEntryType::UpperBound // Score being at least this good (black) gets pruned
                 && score > -prune))
         {
-            return (MinimaxResult::normal(score), MoveType::Eval);
+            return (SearchResult::normal(score), MoveType::Eval);
         }
     }
 
     // TODO: Consider randomising move order
     let mut options = MoveList::new();
-    compute_legal_moves(&mut options, board);
+    let is_check = compute_legal_moves(&mut options, board);
 
     if options.is_empty() {
+        let score = if is_check {
+            Score::BADE_MATE_IN_ZERO
+        } else {
+            Score::ZERO
+        };
+
         cache.transposition_table.push(
             board.hash(),
             TTEntry {
-                depth_searched: usize::MAX, // Checkmate is checkmate
-                white_score: if board.color_to_move().is_white() {
-                    f32::NEG_INFINITY
-                } else {
-                    f32::INFINITY
-                },
+                depth_searched: usize::MAX, // End of game
+                white_score: board.color_to_move().apply_color_to_score(score),
                 entry_type: TTEntryType::Exact,
             },
         );
 
-        return (MinimaxResult::normal(f32::NEG_INFINITY), MoveType::Eval); // Checkmate
+        debug!("{} {score:?} {is_check}", board.to_fen());
+        return (SearchResult::normal(score), MoveType::Eval); // Checkmate
     }
 
     let mut best_move = options[0];
@@ -129,10 +132,17 @@ where
         board,
         cache,
         depth_remaining - 1,
-        f32::NEG_INFINITY,
+        Score::NEG_INF,
         stop_fn,
     );
-    let MinimaxResult {
+    #[cfg(debug_assertions)]
+    let SearchResult {
+        score: mut best_eval,
+        mut poisoned,
+        backtrace: mut best_backtrace,
+    } = -mr;
+    #[cfg(not(debug_assertions))]
+    let SearchResult {
         score: mut best_eval,
         mut poisoned,
     } = -mr;
@@ -148,13 +158,13 @@ where
                 entry_type: TTEntryType::color_bound(board.color_to_move()),
             },
         );
-        return (MinimaxResult::new(best_eval, poisoned), MoveType::Pruned);
+        return (SearchResult::new(best_eval, poisoned), MoveType::Pruned);
     }
 
     for mv in options.into_iter().skip(1) {
         if stop_fn() {
             return (
-                MinimaxResult::new(best_eval, poisoned),
+                SearchResult::new(best_eval, poisoned),
                 MoveType::Interrupted,
             );
         }
@@ -163,20 +173,30 @@ where
 
         // Minimax returns opponent's score
         let (mr, _) = minimax(false, board, cache, depth_remaining - 1, best_eval, stop_fn);
-        let MinimaxResult {
+        #[cfg(debug_assertions)]
+        let SearchResult {
             score: ev,
             poisoned: np,
+            backtrace,
+        } = -mr;
+        #[cfg(not(debug_assertions))]
+        let SearchResult {
+            score: ev,
+            poisoned: np,
+            ..
         } = -mr;
         poisoned |= np;
         board.unmake_last_move(um);
 
-        if ev == f32::INFINITY {
-            return (MinimaxResult::new(ev, poisoned), MoveType::Move(mv));
-        }
+        // TODO: Should we early return for checkmates?
 
         if ev > best_eval {
             best_move = mv;
             best_eval = ev;
+            #[cfg(debug_assertions)]
+            {
+                best_backtrace = backtrace;
+            }
 
             if best_eval > -prune {
                 // Branch will be pruned
@@ -188,7 +208,7 @@ where
                         entry_type: TTEntryType::color_bound(board.color_to_move()),
                     },
                 );
-                return (MinimaxResult::new(best_eval, poisoned), MoveType::Pruned);
+                return (SearchResult::new(best_eval, poisoned), MoveType::Pruned);
             }
         }
     }
@@ -205,12 +225,19 @@ where
     }
 
     // Take draw if position is bad and three-fold is available
-    if best_eval < 0f32 && board.is_threefold() {
-        MinimaxResult::poisoned(0f32);
+    if best_eval < Score::ZERO && board.is_threefold() {
+        return (SearchResult::poisoned(Score::ZERO), MoveType::Draw);
     }
 
+    #[cfg(debug_assertions)]
+    return (
+        SearchResult::new_backtrace(best_eval, poisoned, best_backtrace),
+        MoveType::Move(best_move),
+    );
+
+    #[cfg(not(debug_assertions))]
     (
-        MinimaxResult::new(best_eval, poisoned),
+        SearchResult::new(best_eval, poisoned),
         MoveType::Move(best_move),
     )
 }
@@ -221,7 +248,7 @@ pub fn search_minimax(
     stop_fn: fn() -> bool,
     target_move_time: Duration,
     time_management_strat: TimeManagementStrat,
-) -> Option<Move> {
+) -> (Option<Move>, Score) {
     info!(
         "FEN {} | Target time {:?} | Strat: {:?}",
         board.to_fen(),
@@ -240,20 +267,24 @@ pub fn search_minimax(
     let mut options = MoveList::new();
     compute_legal_moves(&mut options, board);
     let mut best_move = Some(options[0]); // If we fail first search
+    let um = board.make_move(options[0]);
+    let mut eval_after_move = eval(board);
+    board.unmake_last_move(um);
 
-    let mut search_depth: usize = 2; // Keep even to eval on our turn
+    // TODO: TEMP
+    let mut search_depth: usize = 6; // Keep even to eval on our turn
 
     loop {
         info!("Starting search at depth {search_depth}");
 
         let start = Instant::now();
 
-        let (_, best_move_at_sd) = minimax(
+        let (mr, best_move_at_sd) = minimax(
             true,
             board,
             cache,
             search_depth,
-            f32::NEG_INFINITY,
+            Score::NEG_INF,
             &mm_stop_fn,
         );
 
@@ -262,7 +293,7 @@ pub fn search_minimax(
         info!("Completed depth {} in {:?}", search_depth, start.elapsed());
         match best_move_at_sd {
             MoveType::Move(mv) => best_move = Some(mv),
-            MoveType::Draw => best_move = None,
+            MoveType::Draw => best_move = None, // TODO: UCI doesn't support choosing to draw
             MoveType::Pruned => panic!(),
             MoveType::Eval => panic!(),
             MoveType::Interrupted => {
@@ -270,6 +301,9 @@ pub fn search_minimax(
                 break;
             }
         };
+
+        debug!("Minimax Result {:#?} | {:?}", mr, best_move);
+        eval_after_move = mr.score;
 
         // Assume next iteration will take 120x current iteration
         const ITERATION_COST_FACTOR: u32 = 120;
@@ -283,5 +317,5 @@ pub fn search_minimax(
 
     info!("Best move: {:?}", best_move);
 
-    best_move
+    (best_move, eval_after_move)
 }

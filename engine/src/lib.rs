@@ -4,9 +4,11 @@
 mod constant_heuristics;
 pub(crate) mod eval;
 mod minimax;
+pub mod results;
 mod tt;
 
 use crate::minimax::{TimeManagementStrat, search_minimax};
+use crate::results::Score;
 use crate::tt::TranspositionTable;
 use chess_lib::board::{Board, Move};
 use std::cmp::min;
@@ -41,7 +43,7 @@ pub fn search(
     cache: &mut InterMoveCache,
     stop_fn: fn() -> bool,
     time_remaining: Duration,
-) -> Option<Move> {
+) -> (Option<Move>, Score) {
     search_minimax(
         board,
         cache,

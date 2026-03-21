@@ -8,6 +8,7 @@ use crate::uci_conversions::{from_uci_move, to_uci_piece, to_uci_square};
 use crate::uci_state::{UciOptions, UciState};
 use chess_lib::board::{Board, Move};
 use chrono::Local;
+use engine::results::Score;
 use engine::{InterMoveCache, search};
 use fern::Dispatch;
 use log::{debug, error, info, warn};
@@ -203,27 +204,41 @@ fn main() {
                     let cache = cache;
                     let mut c = cache.lock().unwrap();
                     let mut board = board;
-                    let result = search(
+                    let (best_move, eval) = search(
                         &mut board,
                         &mut c,
                         || SHOULD_STOP.load(Ordering::Acquire),
                         time_remaining,
-                    )
-                    .unwrap();
+                    );
+                    let best_move = best_move.unwrap();
 
                     // fastchess requires at least one info message with score
-                    send_uci(UciMessage::Info(vec![UciInfoAttribute::Score {
-                        cp: Some(0),
-                        mate: None,
-                        lower_bound: None,
-                        upper_bound: None,
+                    send_uci(UciMessage::Info(vec![match eval {
+                        Score::PositiveMateIn(pmi) => UciInfoAttribute::Score {
+                            cp: None,
+                            mate: Some(pmi as i8),
+                            lower_bound: None,
+                            upper_bound: None,
+                        },
+                        Score::Score(s) => UciInfoAttribute::Score {
+                            cp: Some((s * 100f32) as i32),
+                            mate: None,
+                            lower_bound: None,
+                            upper_bound: None,
+                        },
+                        Score::NegativeMateIn(nmi) => UciInfoAttribute::Score {
+                            cp: None,
+                            mate: Some(-(nmi as i8)),
+                            lower_bound: None,
+                            upper_bound: None,
+                        },
                     }]));
 
                     send_uci(UciMessage::BestMove {
                         best_move: UciMove {
-                            from: to_uci_square(result.source),
-                            to: to_uci_square(result.destination),
-                            promotion: result.promotion.map(to_uci_piece),
+                            from: to_uci_square(best_move.source),
+                            to: to_uci_square(best_move.destination),
+                            promotion: best_move.promotion.map(to_uci_piece),
                         },
                         ponder: None,
                     });

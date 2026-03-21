@@ -1,3 +1,4 @@
+use crate::results::Score;
 use chess_lib::board::{BoardHash, Color};
 use lru::LruCache;
 use std::num::NonZeroUsize;
@@ -22,7 +23,7 @@ impl TTEntryType {
 
 pub struct TTEntry {
     pub depth_searched: usize,
-    pub white_score: f32,
+    pub white_score: Score,
     pub entry_type: TTEntryType,
 }
 

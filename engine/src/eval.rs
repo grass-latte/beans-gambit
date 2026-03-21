@@ -4,9 +4,10 @@ use crate::constant_heuristics::heatmaps::{
 use crate::constant_heuristics::pieces::{
     BISHOP_VALUE, KNIGHT_VALUE, PAWN_VALUE, QUEEN_VALUE, ROOK_VALUE,
 };
+use crate::results::Score;
 use chess_lib::board::{Board, PieceKind, Square};
 
-pub fn eval(board: &Board) -> f32 {
+pub fn eval(board: &Board) -> Score {
     let color_to_move = board.color_to_move();
 
     let mut score = 0f32;
@@ -33,5 +34,5 @@ pub fn eval(board: &Board) -> f32 {
         score += s;
     }
 
-    score
+    Score::Score(score)
 }

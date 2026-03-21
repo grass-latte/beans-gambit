@@ -1,0 +1,29 @@
+Underpromotes to a rook (see underpromote.pgn):
+2026-03-21 22:02:04.291131623 [INFO] Received message: position startpos moves d2d4 d7d5 e2e4 e7e5 d4e5 d5e4 b1c3 b8c6 g1e2 d8d1 e1d1 g8e7 c1f4 c8f5 e2g3 e7g6 c3e4 f5e4 g3e4 g6f4 e5e6 f7e6 f1b5 e8c8 d1c1 c6e5 h1f1 a7a6 g2g3 f4g6 b5e2 f8b4 f2f4 e5c6 a2a3 b4a5 g3g4 a5b6 f4f5 e6f5 g4f5 g6e5 f5f6 g7f6 f1f6 b6e3 c1b1 c6d4 b1a2 d4e2 a1e1 d8d4 e1e2 d4e4 e2e1 e3g5 f6a6 b7a6 e1e4 g5f6 h2h3 h8d8 e4a4 c8b7 a4f4 f6g7 f4h4 h7h6 h4b4 b7a7 b4b3 e5c4 b3d3 d8d3 c2d3 c4b2 a2b3 c7c5 h3h4 h6h5 b3c2 g7d4 c2d2 a6a5 d2e2 a5a4 e2f3 c5c4 d3c4 b2c4 f3e4 d4g7 e4f4 c4e5 f4e4 a7b6 e4d5 b6b5 d5d6 b5c4 d6e6 c4b3 e6d5 b3a3 d5c5 a3a2 c5b5 a4a3 b5a4 g7f8 a4a5 a2b1 a5a4 a3a2 a4b3
+2026-03-21 22:02:04.291190964 [INFO] Received message: isready
+2026-03-21 22:02:04.291194554 [INFO] Sending message readyok
+2026-03-21 22:02:04.291243114 [INFO] Received message: go wtime 433159 btime 425276 movestogo 23
+2026-03-21 22:02:04.291313845 [INFO] FEN 5b2/8/8/4n2p/7P/1K6/p7/1k6 b - - 1 58 | Target time 15s | Strat: TargetLimit
+2026-03-21 22:02:04.291357745 [INFO] Starting search at depth 2
+2026-03-21 22:02:04.291378125 [INFO] Completed depth 2 in 17.2µs
+2026-03-21 22:02:04.291380925 [INFO] Starting search at depth 4
+2026-03-21 22:02:04.291388975 [INFO] Completed depth 4 in 5.69µs
+2026-03-21 22:02:04.291391505 [INFO] Starting search at depth 6
+2026-03-21 22:02:04.298187973 [INFO] Completed depth 6 in 6.793928ms
+2026-03-21 22:02:04.298199093 [INFO] Starting search at depth 8
+2026-03-21 22:02:04.321976359 [INFO] Completed depth 8 in 23.773776ms
+2026-03-21 22:02:04.321990779 [INFO] Starting search at depth 10
+2026-03-21 22:02:05.466325550 [INFO] Completed depth 10 in 1.144330941s
+2026-03-21 22:02:05.466372071 [INFO] Next depth expected to take to long
+2026-03-21 22:02:05.466376981 [INFO] Best move: Some(Move { source: A2, destination: A1, promotion: Some(Rook) })
+2026-03-21 22:02:05.466381451 [INFO] Sending message info score cp 0
+2026-03-21 22:02:05.466392831 [INFO] Sending message bestmove a2a1r
+2026-03-21 22:02:05.698163929 [INFO] Received message: position startpos moves d2d4 d7d5 e2e4 e7e5 d4e5 d5e4 b1c3 b8c6 g1e2 d8d1 e1d1 g8e7 c1f4 c8f5 e2g3 e7g6 c3e4 f5e4 g3e4 g6f4 e5e6 f7e6 f1b5 e8c8 d1c1 c6e5 h1f1 a7a6 g2g3 f4g6 b5e2 f8b4 f2f4 e5c6 a2a3 b4a5 g3g4 a5b6 f4f5 e6f5 g4f5 g6e5 f5f6 g7f6 f1f6 b6e3 c1b1 c6d4 b1a2 d4e2 a1e1 d8d4 e1e2 d4e4 e2e1 e3g5 f6a6 b7a6 e1e4 g5f6 h2h3 h8d8 e4a4 c8b7 a4f4 f6g7 f4h4 h7h6 h4b4 b7a7 b4b3 e5c4 b3d3 d8d3 c2d3 c4b2 a2b3 c7c5 h3h4 h6h5 b3c2 g7d4 c2d2 a6a5 d2e2 a5a4 e2f3 c5c4 d3c4 b2c4 f3e4 d4g7 e4f4 c4e5 f4e4 a7b6 e4d5 b6b5 d5d6 b5c4 d6e6 c4b3 e6d5 b3a3 d5c5 a3a2 c5b5 a4a3 b5a4 g7f8 a4a5 a2b1 a5a4 a3a2 a4b3 a2a1r b3c3
+
+Requires this to underpromote in debug mode:
+position startpos moves d2d4 d7d5 e2e4 e7e5 d4e5 d5e4 b1c3 b8c6 g1e2 d8d1 e1d1 g8e7 c1f4 c8f5 e2g3 e7g6 c3e4 f5e4 g3e4 g6f4 e5e6 f7e6 f1b5 e8c8 d1c1 c6e5 h1f1 a7a6 g2g3 f4g6 b5e2 f8b4 f2f4 e5c6 a2a3 b4a5 g3g4 a5b6 f4f5 e6f5 g4f5 g6e5 f5f6 g7f6 f1f6 b6e3 c1b1 c6d4 b1a2 d4e2 a1e1 d8d4 e1e2 d4e4 e2e1 e3g5 f6a6 b7a6 e1e4 g5f6 h2h3 h8d8 e4a4 c8b7 a4f4 f6g7 f4h4 h7h6 h4b4 b7a7 b4b3 e5c4 b3d3 d8d3 c2d3 c4b2 a2b3 c7c5 h3h4 h6h5 b3c2 g7d4 c2d2 a6a5 d2e2 a5a4 e2f3 c5c4 d3c4 b2c4 f3e4 d4g7 e4f4 c4e5 f4e4 a7b6 e4d5 b6b5 d5d6 b5c4 d6e6 c4b3 e6d5 b3a3 d5c5 a3a2 c5b5 a4a3 b5a4 g7f8 a4a5 a2b1 a5a4 a3a2 a4b3 f8c5 b3c3
+go infinite
+
+
+position startpos moves d2d4 d7d5 e2e4 e7e5 d4e5 d5e4 b1c3 b8c6 g1e2 d8d1 e1d1 g8e7 c1f4 c8f5 e2g3 e7g6 c3e4 f5e4 g3e4 g6f4 e5e6 f7e6 f1b5 e8c8 d1c1 c6e5 h1f1 a7a6 g2g3 f4g6 b5e2 f8b4 f2f4 e5c6 a2a3 b4a5 g3g4 a5b6 f4f5 e6f5 g4f5 g6e5 f5f6 g7f6 f1f6 b6e3 c1b1 c6d4 b1a2 d4e2 a1e1 d8d4 e1e2 d4e4 e2e1 e3g5 f6a6 b7a6 e1e4 g5f6 h2h3 h8d8 e4a4 c8b7 a4f4 f6g7 f4h4 h7h6 h4b4 b7a7 b4b3 e5c4 b3d3 d8d3 c2d3 c4b2 d3d4 g7d4 h3h4 b2d3 a2b3 d3f4 a3a4 d4f6 h4h5 f4h5 a4a5 h5g3 b3a2 h6h5 a2b1 h5h4 b1c1 h4h3 c1b1 h3h2 b1a2 h2h1q a2b3 h1b1 b3a3 c7c6 a3a4 g3f1 a4a3 f1d2 a3a4
+go infinite
