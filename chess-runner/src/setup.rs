@@ -37,6 +37,7 @@ impl Default for PerformanceOptions {
 }
 
 pub enum MatchType {
+    BuildAndRunCutechess,
     BotVsBot(BotVsBotOptions),
     Compliance,
     Performance(PerformanceOptions),
@@ -98,6 +99,8 @@ impl MatchType {
 
 #[derive(Debug, Serialize, Deserialize, EnumIter, EnumString, Display)]
 pub enum SimpleMatchType {
+    #[strum(serialize = "Build and Run Cutechess")]
+    BuildAndRunCutechess,
     #[strum(serialize = "Bot v Bot")]
     BotVsBot,
     #[strum(serialize = "Compliance")]
@@ -113,6 +116,7 @@ pub enum SimpleMatchType {
 impl SimpleMatchType {
     pub fn bots_required(&self) -> usize {
         match &self {
+            SimpleMatchType::BuildAndRunCutechess => 1,
             SimpleMatchType::BotVsBot => 2,
             SimpleMatchType::Compliance => 1,
             SimpleMatchType::Performance => 1,
@@ -123,6 +127,7 @@ impl SimpleMatchType {
 
     pub fn complete_setup(&self) -> MatchType {
         match &self {
+            SimpleMatchType::BuildAndRunCutechess => MatchType::BuildAndRunCutechess,
             SimpleMatchType::BotVsBot => MatchType::setup_bot_vs_bot(),
             SimpleMatchType::Compliance => MatchType::Compliance,
             SimpleMatchType::Performance => MatchType::setup_performance(),

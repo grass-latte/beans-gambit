@@ -57,6 +57,10 @@ impl Color {
             Self::Black => -1,
         }
     }
+
+    pub fn apply_color_to_score(&self, score: f32) -> f32 {
+        if self.is_white() { score } else { -score }
+    }
 }
 
 impl Not for Color {

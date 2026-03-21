@@ -168,6 +168,7 @@ fn main() {
                 RUNNING.store(true, Ordering::Release);
 
                 let cache = cache.clone();
+                let board = board.clone();
                 thread::spawn(move || {
                     let cache = cache;
                     let mut c = cache.lock().unwrap();
