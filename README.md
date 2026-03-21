@@ -4,7 +4,13 @@ Beans Gambit
 
 ## Version Notes
 
-This is the main version - see a specific version (`version/xxx`) and check the readme for details about it.
+Some of these are untested and may not behave perfectly
+
+- Awareness of three-fold rule
+- Awareness of 50/75 move rule
+- Iterative deepening
+- Time management / strategies
+- Added pruned branches to transposition table with flags
 
 ## Version History
 
