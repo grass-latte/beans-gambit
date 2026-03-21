@@ -22,7 +22,9 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use std::{io, thread};
 use strum::IntoEnumIterator;
-use vampirc_uci::{UciInfoAttribute, UciMessage, UciMove, UciPiece, UciSquare, parse_one};
+use vampirc_uci::{
+    UciInfoAttribute, UciMessage, UciMove, UciPiece, UciSquare, UciTimeControl, parse_one,
+};
 
 pub const fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
@@ -167,14 +169,47 @@ fn main() {
 
                 RUNNING.store(true, Ordering::Release);
 
+                let time_remaining = match time_control {
+                    Some(UciTimeControl::Infinite) => Duration::MAX,
+                    Some(UciTimeControl::Ponder) => Duration::MAX,
+                    Some(UciTimeControl::MoveTime(d)) => {
+                        Duration::from_millis(d.num_milliseconds().try_into().unwrap())
+                    }
+                    Some(UciTimeControl::TimeLeft {
+                        white_time,
+                        black_time,
+                        ..
+                    }) => {
+                        if board.color_to_move().is_white() {
+                            white_time
+                                .map(|d| {
+                                    Duration::from_millis(d.num_milliseconds().try_into().unwrap())
+                                })
+                                .unwrap_or(Duration::MAX)
+                        } else {
+                            black_time
+                                .map(|d| {
+                                    Duration::from_millis(d.num_milliseconds().try_into().unwrap())
+                                })
+                                .unwrap_or(Duration::MAX)
+                        }
+                    }
+                    None => Duration::MAX,
+                };
+
                 let cache = cache.clone();
                 let board = board.clone();
                 thread::spawn(move || {
                     let cache = cache;
                     let mut c = cache.lock().unwrap();
                     let mut board = board;
-                    let result =
-                        search(&mut board, &mut c, || SHOULD_STOP.load(Ordering::Acquire)).unwrap();
+                    let result = search(
+                        &mut board,
+                        &mut c,
+                        || SHOULD_STOP.load(Ordering::Acquire),
+                        time_remaining,
+                    )
+                    .unwrap();
 
                     // fastchess requires at least one info message with score
                     send_uci(UciMessage::Info(vec![UciInfoAttribute::Score {

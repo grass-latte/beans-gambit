@@ -449,11 +449,13 @@ impl Board {
     }
 
     pub fn unmake_last_move(&mut self, um: UnmakeInfo) {
-        let target_hash = self.history.pop().unwrap();
-        let repetition_entry = self.repetition_count.get_mut(&target_hash).unwrap();
+        // TODO: Consider not modifying hash at all and simply loading from history (in debug mode hash modification can be used in an assert)
+
+        let unmade_hash = self.history.pop().unwrap();
+        let repetition_entry = self.repetition_count.get_mut(&unmade_hash).unwrap();
         *repetition_entry -= 1;
         if *repetition_entry == 0 {
-            self.repetition_count.remove(&target_hash);
+            self.repetition_count.remove(&unmade_hash);
         }
         self.is_threefold = um.old_is_threefold;
 
@@ -465,6 +467,7 @@ impl Board {
         if self.color_to_move == Color::Black {
             self.fullmoves -= 1;
         }
+
         self.hash = self.hash.set_en_passant_file(
             self.en_passant_destination.map(|s| s.file()),
             um.old_en_passant_destination.map(|s| s.file()),
@@ -543,8 +546,9 @@ impl Board {
             }
         };
 
-        debug_assert_eq!(
-            self.hash, target_hash,
+        assert_eq!(
+            self.hash,
+            *self.history.last().unwrap(),
             "Did not correctly revert hash with unmake move"
         );
     }

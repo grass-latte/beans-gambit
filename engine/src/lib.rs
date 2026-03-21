@@ -6,9 +6,11 @@ pub(crate) mod eval;
 mod minimax;
 mod tt;
 
-use crate::minimax::search_minimax;
+use crate::minimax::{TimeManagementStrat, search_minimax};
 use crate::tt::TranspositionTable;
 use chess_lib::board::{Board, Move};
+use std::cmp::min;
+use std::time::Duration;
 
 pub const fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
@@ -38,6 +40,13 @@ pub fn search(
     board: &mut Board,
     cache: &mut InterMoveCache,
     stop_fn: fn() -> bool,
+    time_remaining: Duration,
 ) -> Option<Move> {
-    search_minimax(board, cache, stop_fn)
+    search_minimax(
+        board,
+        cache,
+        stop_fn,
+        min(Duration::from_secs(15), time_remaining / 10),
+        TimeManagementStrat::TargetLimit,
+    )
 }
