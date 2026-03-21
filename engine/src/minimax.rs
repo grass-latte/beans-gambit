@@ -137,15 +137,16 @@ where
     );
     #[cfg(debug_assertions)]
     let SearchResult {
-        score: mut best_eval,
+        score: eval,
         mut poisoned,
         backtrace: mut best_backtrace,
     } = -mr;
     #[cfg(not(debug_assertions))]
     let SearchResult {
-        score: mut best_eval,
+        score: eval,
         mut poisoned,
     } = -mr;
+    let mut best_eval = eval.increment_mate_in();
     board.unmake_last_move(um);
 
     if best_eval > -prune {
@@ -185,6 +186,7 @@ where
             poisoned: np,
             ..
         } = -mr;
+        let ev = ev.increment_mate_in();
         poisoned |= np;
         board.unmake_last_move(um);
 
@@ -234,7 +236,6 @@ where
         SearchResult::new_backtrace(best_eval, poisoned, best_backtrace),
         MoveType::Move(best_move),
     );
-
     #[cfg(not(debug_assertions))]
     (
         SearchResult::new(best_eval, poisoned),
