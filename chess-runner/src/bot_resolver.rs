@@ -125,7 +125,7 @@ fn compile_directory(directory: PathBuf) -> PathBuf {
     exe_path
 }
 
-fn get_stockfish() -> ChessBot {
+pub fn get_stockfish() -> ChessBot {
     let Ok(path) = which::which("stockfish") else {
         panic!(
             "{}",

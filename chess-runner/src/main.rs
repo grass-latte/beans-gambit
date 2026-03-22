@@ -2,6 +2,7 @@ mod bot_resolver;
 pub mod options;
 mod run;
 pub mod setup;
+mod stockfish_ladder;
 
 use crate::bot_resolver::resolve_bot;
 use crate::setup::select_options;

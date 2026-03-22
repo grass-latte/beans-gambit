@@ -39,6 +39,7 @@ impl Default for PerformanceOptions {
 pub enum MatchType {
     BuildAndRunCutechess,
     BotVsBot(BotVsBotOptions),
+    StockfishLadder,
     Compliance,
     Performance(PerformanceOptions),
     BuildOnly,
@@ -103,6 +104,8 @@ pub enum SimpleMatchType {
     BuildAndRunCutechess,
     #[strum(serialize = "Bot v Bot")]
     BotVsBot,
+    #[strum(serialize = "Stockfish Ladder")]
+    StockfishLadder,
     #[strum(serialize = "Compliance")]
     Compliance,
     #[strum(serialize = "Performance (Flamegraph)")]
@@ -118,6 +121,7 @@ impl SimpleMatchType {
         match &self {
             SimpleMatchType::BuildAndRunCutechess => 2,
             SimpleMatchType::BotVsBot => 2,
+            SimpleMatchType::StockfishLadder => 1,
             SimpleMatchType::Compliance => 1,
             SimpleMatchType::Performance => 1,
             SimpleMatchType::BuildOnly => 1,
@@ -129,6 +133,7 @@ impl SimpleMatchType {
         match &self {
             SimpleMatchType::BuildAndRunCutechess => MatchType::BuildAndRunCutechess,
             SimpleMatchType::BotVsBot => MatchType::setup_bot_vs_bot(),
+            SimpleMatchType::StockfishLadder => MatchType::StockfishLadder,
             SimpleMatchType::Compliance => MatchType::Compliance,
             SimpleMatchType::Performance => MatchType::setup_performance(),
             SimpleMatchType::BuildOnly => MatchType::BuildOnly,
