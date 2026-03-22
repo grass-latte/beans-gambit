@@ -116,7 +116,7 @@ pub enum SimpleMatchType {
 impl SimpleMatchType {
     pub fn bots_required(&self) -> usize {
         match &self {
-            SimpleMatchType::BuildAndRunCutechess => 1,
+            SimpleMatchType::BuildAndRunCutechess => 2,
             SimpleMatchType::BotVsBot => 2,
             SimpleMatchType::Compliance => 1,
             SimpleMatchType::Performance => 1,
