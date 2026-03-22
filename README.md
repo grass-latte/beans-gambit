@@ -12,3 +12,4 @@ This is the main version - see a specific version (`version/xxx`) and check the 
 - `0.2.0` - Minimise moves available to opponent on next turn [sometimes crashes]
 - `0.3.0` - Very simple minimax to depth 5, AB pruning, and simple piece-score evaluation [not found to crash yet]
 - `0.4.0` - Further work, see its readme. Improvements quite untested.
+- `0.4.3` - Bug fixes and small changes

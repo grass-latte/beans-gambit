@@ -367,10 +367,8 @@ name = "engine"
 version = "0.4.3"
 dependencies = [
  "chess-lib",
- "derive-new",
  "log",
  "lru",
- "rand",
 ]
 
 [[package]]

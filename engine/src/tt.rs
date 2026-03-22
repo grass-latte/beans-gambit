@@ -21,6 +21,9 @@ impl TTEntryType {
     }
 }
 
+// TODO: Store hashes from initial to eval to detect repetition
+// e.g. if A's final eval is A -> B -> C -> D then B, C, D must be stored to test whether they
+// can be used without causing threefold
 pub struct TTEntry {
     pub depth_searched: usize,
     pub white_score: Score,
@@ -33,8 +36,8 @@ pub struct TranspositionTable {
 
 impl TranspositionTable {
     pub fn new() -> TranspositionTable {
-        // 800 MB
         TranspositionTable {
+            // TODO: Sensible way to size this
             inner: LruCache::new(
                 NonZeroUsize::try_from(800_000_000 / size_of::<TTEntry>()).unwrap(),
             ),
