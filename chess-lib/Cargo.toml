@@ -9,8 +9,7 @@ derive_more = { version = "2.0.1", features = ["full"] }
 itertools = "0.14.0"
 rand = "0.9.2"
 smallvec = { version = "1.15.1", features = ["const_generics"] }
-thiserror = "2.0.17"
-log = "0.4.29"
 strum = "0.27.2"
 strum_macros = "0.27.2"
-get-random-const = "2.1.0"
+# Broken on crates.io
+const-random = { git = "https://github.com/tkaitchuck/constrandom", rev = "4f71cb510e77eb6a26f8c7296c17811d0416fd41" }

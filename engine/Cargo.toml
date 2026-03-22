@@ -8,3 +8,6 @@ chess-lib = { path = "../chess-lib" }
 
 log = "0.4.29"
 lru = "0.16.3"
+
+[build-dependencies]
+chess-lib = { path = "../chess-lib" }

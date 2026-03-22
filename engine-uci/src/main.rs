@@ -8,14 +8,16 @@ use crate::uci_conversions::{from_uci_move, to_uci_piece, to_uci_square};
 use crate::uci_state::{UciOptions, UciState};
 use chess_lib::board::{Board, Move};
 use chrono::Local;
+use deepsize::DeepSizeOf;
 use engine::results::Score;
 use engine::{InterMoveCache, search};
 use fern::Dispatch;
+use human_bytes::human_bytes;
 use log::{debug, error, info, warn};
 use std::borrow::Borrow;
 use std::fs::File;
 use std::io::{BufRead, Write};
-use std::ops::DerefMut;
+use std::ops::{Deref, DerefMut};
 use std::process::exit;
 use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -87,19 +89,17 @@ fn main() {
     let mut board = Board::starting();
     let cache = Arc::new(Mutex::new(InterMoveCache::new()));
 
-    println!(
-        "Beans Gambit UCI v{} [Bot v{} | Chess Lib v{}]",
-        version(),
-        engine::version(),
-        chess_lib::version()
-    );
-
-    info!(
-        "Beans Gambit UCI v{} [Bot v{} | Chess Lib v{}]",
-        version(),
-        engine::version(),
-        chess_lib::version()
-    );
+    let info_text = format!("Hash: {}", Board::starting().hash())
+        + "\n"
+        + &format!(
+            "Beans Gambit UCI v{} [Bot v{} | Chess Lib v{} | {} cache]",
+            version(),
+            engine::version(),
+            chess_lib::version(),
+            human_bytes(cache.lock().unwrap().size_bytes() as f64)
+        );
+    println!("{info_text}");
+    info!("{info_text}");
 
     info!("Waiting for stdin");
 

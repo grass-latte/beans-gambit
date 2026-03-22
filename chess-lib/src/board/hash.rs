@@ -1,13 +1,21 @@
 use crate::board::{BoardFile, CastlingRights, Piece, Square};
-use get_random_const::random;
+use const_random::const_random;
+use std::fmt::Display;
+use std::mem;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub struct BoardHash(u64);
 
-const PIECE_HASHES: [u64; 12 * 64] = random!([u64; 768]);
-const BLACK_TO_MOVE_HASH: u64 = random!(u64);
-const CASTLING_RIGHTS: [u64; 16] = random!([u64; 16]);
-const EN_PASSANT_FILE: [u64; 8] = random!([u64; 8]);
+#[rustfmt::skip]
+const EXAMPLE: [u8; 30] = const_random!([u8 ; 30]);
+
+#[rustfmt::skip]
+const PIECE_HASHES: [u64; 12 * 64] = unsafe { mem::transmute(const_random!([u8 ; 6144])) };
+const BLACK_TO_MOVE_HASH: u64 = const_random!(u64);
+#[rustfmt::skip]
+const CASTLING_RIGHTS: [u64; 16] = unsafe { mem::transmute(const_random!([u8 ; 128])) };
+#[rustfmt::skip]
+const EN_PASSANT_FILE: [u64; 8] = unsafe { mem::transmute(const_random!([u8 ; 64])) };
 
 impl BoardHash {
     pub const fn zero() -> Self {
@@ -49,5 +57,11 @@ impl BoardHash {
         };
 
         BoardHash(hash)
+    }
+}
+
+impl Display for BoardHash {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        write!(f, "{:016x}", self.0)
     }
 }

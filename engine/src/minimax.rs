@@ -30,7 +30,7 @@ fn minimax<F>(
     toplevel: bool,
     board: &mut Board,
     cache: &mut InterMoveCache,
-    depth_remaining: usize,
+    depth_remaining: u8,
     prune: Score,
     stop_fn: &F,
 ) -> (SearchResult, MoveType)
@@ -64,7 +64,7 @@ fn minimax_inner<F>(
     toplevel: bool,
     board: &mut Board,
     cache: &mut InterMoveCache,
-    depth_remaining: usize,
+    depth_remaining: u8,
     prune: Score,
     stop_fn: &F,
 ) -> (SearchResult, MoveType)
@@ -128,7 +128,7 @@ where
         cache.transposition_table.push(
             board.hash(),
             TTEntry {
-                depth_searched: usize::MAX, // End of game
+                depth_searched: u8::MAX, // End of game
                 white_score: board.color_to_move().apply_color_to_score(score),
                 entry_type: TTEntryType::Exact,
             },
@@ -299,9 +299,9 @@ pub fn search_minimax(
     let mut eval_after_move = eval(board);
     board.unmake_last_move(um);
 
-    let mut search_depth: usize = 2; // Keep even to eval on our turn
+    let mut search_depth: u8 = 2; // Keep even to eval on our turn
 
-    loop {
+    while search_depth < 250 {
         info!("Starting search at depth {search_depth}");
 
         let start = Instant::now();

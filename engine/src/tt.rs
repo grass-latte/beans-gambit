@@ -25,7 +25,7 @@ impl TTEntryType {
 // e.g. if A's final eval is A -> B -> C -> D then B, C, D must be stored to test whether they
 // can be used without causing threefold
 pub struct TTEntry {
-    pub depth_searched: usize,
+    pub depth_searched: u8,
     pub white_score: Score,
     pub entry_type: TTEntryType,
 }
@@ -42,6 +42,11 @@ impl TranspositionTable {
                 NonZeroUsize::try_from(800_000_000 / size_of::<TTEntry>()).unwrap(),
             ),
         }
+    }
+
+    pub fn size_bytes(&self) -> usize {
+        size_of::<TranspositionTable>()
+            + self.inner.cap().get() * (size_of::<BoardHash>() + size_of::<TTEntry>())
     }
 
     pub fn push(&mut self, hash: BoardHash, entry: TTEntry) {

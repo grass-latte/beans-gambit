@@ -36,6 +36,10 @@ impl InterMoveCache {
             transposition_table: TranspositionTable::new(),
         }
     }
+
+    pub fn size_bytes(&self) -> usize {
+        self.transposition_table.size_bytes()
+    }
 }
 
 pub fn search(
