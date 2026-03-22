@@ -11,6 +11,8 @@ use crate::minimax::{TimeManagementStrat, search_minimax};
 use crate::results::Score;
 use crate::tt::TranspositionTable;
 use chess_lib::board::{Board, Move};
+use log::info;
+use opening_book::OpeningBook;
 use std::cmp::min;
 use std::time::Duration;
 
@@ -47,12 +49,29 @@ pub fn search(
     cache: &mut InterMoveCache,
     stop_fn: fn() -> bool,
     time_remaining: Duration,
+    opening_book: Option<&dyn OpeningBook>,
 ) -> (Option<Move>, Score) {
+    let target_move_time = min(Duration::from_secs(20), time_remaining / 10);
+    let time_management_strat = TimeManagementStrat::TargetLimit;
+    info!(
+        "FEN {} | Target time {:?} | Strat: {:?}",
+        board.to_fen(),
+        target_move_time,
+        time_management_strat
+    );
+
+    if let Some(opening_book) = opening_book {
+        if let Some(mv) = opening_book.get_weighted(board.hash()) {
+            info!("Playing book move {:?}", mv);
+            return (Some(mv), Score::ZERO);
+        }
+    }
+
     search_minimax(
         board,
         cache,
         stop_fn,
-        min(Duration::from_secs(20), time_remaining / 10),
-        TimeManagementStrat::TargetLimit,
+        target_move_time,
+        time_management_strat,
     )
 }

@@ -1,13 +1,11 @@
 [package]
 name = "engine"
-version = "0.4.4"
+version = "0.4.5"
 edition = "2024"
 
 [dependencies]
 chess-lib = { path = "../chess-lib" }
+opening-book = { path = "../opening-book" }
 
 log = "0.4.29"
 lru = "0.16.3"
-
-[build-dependencies]
-chess-lib = { path = "../chess-lib" }

@@ -22,6 +22,10 @@ impl BoardHash {
         BoardHash(0)
     }
 
+    pub const fn from_u64(v: u64) -> Self {
+        BoardHash(v)
+    }
+
     pub const fn toggle_piece(self, piece: Piece, square: Square) -> Self {
         BoardHash(self.0 ^ PIECE_HASHES[(piece.as_u8() as usize) * 64 + square.as_u8() as usize])
     }
@@ -57,6 +61,10 @@ impl BoardHash {
         };
 
         BoardHash(hash)
+    }
+
+    pub fn u64(&self) -> u64 {
+        self.0
     }
 }
 

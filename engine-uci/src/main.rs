@@ -14,6 +14,7 @@ use engine::{InterMoveCache, search};
 use fern::Dispatch;
 use human_bytes::human_bytes;
 use log::{debug, error, info, warn};
+use opening_book::{DefaultOpeningBook, OpeningBook};
 use std::borrow::Borrow;
 use std::fs::File;
 use std::io::{BufRead, Write};
@@ -88,16 +89,19 @@ fn main() {
     let mut state = UciState::new();
     let mut board = Board::starting();
     let cache = Arc::new(Mutex::new(InterMoveCache::new()));
+    let opening_book: Arc<Mutex<DefaultOpeningBook>> =
+        Arc::new(Mutex::new(DefaultOpeningBook::initialise()));
 
-    let info_text = format!("Hash: {}", Board::starting().hash())
+    let info_text = format!(
+        "Beans Gambit UCI v{} [Bot v{} | Chess Lib v{} | {} cache]",
+        version(),
+        engine::version(),
+        chess_lib::version(),
+        human_bytes(cache.lock().unwrap().size_bytes() as f64)
+    ) + "\n"
+        + &format!("Hash: {}", Board::starting().hash())
         + "\n"
-        + &format!(
-            "Beans Gambit UCI v{} [Bot v{} | Chess Lib v{} | {} cache]",
-            version(),
-            engine::version(),
-            chess_lib::version(),
-            human_bytes(cache.lock().unwrap().size_bytes() as f64)
-        );
+        + &opening_book.lock().unwrap().statistics();
     println!("{info_text}");
     info!("{info_text}");
 
@@ -199,9 +203,11 @@ fn main() {
                 };
 
                 let cache = cache.clone();
+                let opening_book = opening_book.clone();
                 let board = board.clone();
                 thread::spawn(move || {
                     let cache = cache;
+                    let opening_book = opening_book;
                     let mut c = cache.lock().unwrap();
                     let mut board = board;
                     let (best_move, eval) = search(
@@ -209,6 +215,7 @@ fn main() {
                         &mut c,
                         || SHOULD_STOP.load(Ordering::Acquire),
                         time_remaining,
+                        Some(opening_book.lock().unwrap().deref()),
                     );
                     let best_move = best_move.unwrap();
 

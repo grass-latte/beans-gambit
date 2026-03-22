@@ -277,13 +277,6 @@ pub fn search_minimax(
     target_move_time: Duration,
     time_management_strat: TimeManagementStrat,
 ) -> (Option<Move>, Score) {
-    info!(
-        "FEN {} | Target time {:?} | Strat: {:?}",
-        board.to_fen(),
-        target_move_time,
-        time_management_strat
-    );
-
     let limit = Instant::now() + target_move_time;
 
     let mm_stop_fn: Box<dyn Fn() -> bool> = if time_management_strat == StrictLimit {

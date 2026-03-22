@@ -1,11 +1,12 @@
 [package]
 name = "engine-uci"
-version = "0.4.4"
+version = "0.4.5"
 edition = "2024"
 
 [dependencies]
 engine = { path = "../engine" }
 chess-lib = { path = "../chess-lib" }
+opening-book = { path = "../opening-book" }
 
 strum = "0.28.0"
 strum_macros = "0.28.0"
