@@ -1,4 +1,5 @@
 use crate::setup::{BotVsBotOptions, ChessBot, ChessOptions, MatchType, PerformanceOptions};
+use crate::stockfish_ladder::stockfish_ladder;
 use color_print::{cformat, cprintln};
 use itertools::Itertools;
 use std::io::{BufRead, BufReader, Write};
@@ -6,7 +7,6 @@ use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::str::FromStr;
 
-#[allow(unused)]
 fn bot_vs_bot(bot1: ChessBot, bot2: ChessBot, options: &BotVsBotOptions) {
     let mut command = Command::new("fastchess");
     let command = command
@@ -98,26 +98,6 @@ fn wait_for(reader: &mut BufReader<std::process::ChildStdout>, token: &str) {
         }
     }
 }
-
-// #[cfg(unix)]
-// fn send_ctrl_c(pid: u32) {
-//     use nix::sys::signal::{kill, Signal};
-//     use nix::unistd::Pid;
-//
-//     kill(Pid::from_raw(pid as i32), Signal::SIGINT).unwrap();
-// }
-//
-// #[cfg(windows)]
-// fn send_ctrl_c(pgid: u32) {
-//     use windows_sys::Win32::System::Console::GenerateConsoleCtrlEvent;
-//     use windows_sys::Win32::System::Console::CTRL_C_EVENT;
-//     use windows_sys::Win32::System::Console::CTRL_BREAK_EVENT;
-//
-//     let ok = unsafe { GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, pgid) };
-//     if ok == 0 {
-//         eprintln!("GenerateConsoleCtrlEvent failed");
-//     }
-// }
 
 fn performance(bot: ChessBot, options: &PerformanceOptions) {
     let mut command = Command::new("flamegraph");
@@ -218,6 +198,7 @@ pub fn run(options: ChessOptions, bots: Vec<ChessBot>) {
         MatchType::Compliance => compliance(bots[0].clone()),
         MatchType::Performance(options) => performance(bots[0].clone(), options),
         MatchType::BotVsBot(options) => bot_vs_bot(bots[0].clone(), bots[1].clone(), options),
+        MatchType::StockfishLadder => stockfish_ladder(bots[0].clone()),
         MatchType::BuildOnly => {
             println!("Bot {} at {}", &bots[0].name, &bots[0].path);
         }

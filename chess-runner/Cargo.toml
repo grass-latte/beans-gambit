@@ -1,6 +1,6 @@
 [package]
 name = "chess-runner"
-version = "0.2.0"
+version = "0.4.4"
 edition = "2024"
 
 default-run = "chess-runner"
