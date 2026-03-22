@@ -92,7 +92,7 @@ fn get_pawn_push_bitboard(color: Color, sq: Square, all_pieces_bitboard: Bitboar
 //         }
 //     }
 
-pub fn compute_legal_moves(moves: &mut MoveList, board: &Board) {
+pub fn compute_legal_moves(moves: &mut MoveList, board: &Board) -> bool {
     let friendly_pieces = board
         .pieces()
         .iter_single_color(board.color_to_move())
@@ -307,6 +307,8 @@ pub fn compute_legal_moves(moves: &mut MoveList, board: &Board) {
             promotion: None,
         })
     }
+
+    is_check
 }
 
 /// Returns the bitboard of squares attacked by the piece on the given square,

@@ -13,9 +13,9 @@ pub use mv::*;
 pub use piece::*;
 pub use piece_storage::*;
 pub use square::*;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Board {
     pieces: PieceStorage,
     color_to_move: Color,
@@ -24,6 +24,9 @@ pub struct Board {
     halfmoves_since_event: u32, // Since last capture or pawn move
     fullmoves: u32,
     hash: BoardHash,
+    history: Vec<BoardHash>,
+    repetition_count: HashMap<BoardHash, u8>,
+    is_threefold: bool,
 }
 
 impl Board {
@@ -58,6 +61,9 @@ impl Board {
 
         hash = hash.update_castling_rights(CastlingRights::all(), castling_rights);
 
+        let mut repetition_count = HashMap::new();
+        repetition_count.insert(hash, 0);
+
         Self {
             pieces: piece_storage,
             color_to_move,
@@ -66,6 +72,9 @@ impl Board {
             halfmoves_since_event,
             fullmoves,
             hash,
+            history: vec![hash],
+            repetition_count,
+            is_threefold: false,
         }
     }
 
@@ -270,6 +279,7 @@ impl Board {
             old_en_passant_destination: self.en_passant_destination,
             old_castling_rights: self.castling_rights,
             old_halfmoves_since_event: self.halfmoves_since_event,
+            old_is_threefold: self.is_threefold,
         };
 
         self.hash = self
@@ -429,10 +439,26 @@ impl Board {
             self.fullmoves += 1;
         }
 
+        self.history.push(self.hash);
+        let repetition_entry = self.repetition_count.entry(self.hash).or_insert(0);
+        *repetition_entry += 1;
+
+        self.is_threefold = *repetition_entry >= 3;
+
         unmake_info
     }
 
     pub fn unmake_last_move(&mut self, um: UnmakeInfo) {
+        // TODO: Consider not modifying hash at all and simply loading from history (in debug mode hash modification can be used in an assert)
+
+        let unmade_hash = self.history.pop().unwrap();
+        let repetition_entry = self.repetition_count.get_mut(&unmade_hash).unwrap();
+        *repetition_entry -= 1;
+        if *repetition_entry == 0 {
+            self.repetition_count.remove(&unmade_hash);
+        }
+        self.is_threefold = um.old_is_threefold;
+
         let dx = um.destination.file().as_u8() as i32 - um.source.file().as_u8() as i32;
 
         self.hash = self.hash.toggle_move();
@@ -441,6 +467,7 @@ impl Board {
         if self.color_to_move == Color::Black {
             self.fullmoves -= 1;
         }
+
         self.hash = self.hash.set_en_passant_file(
             self.en_passant_destination.map(|s| s.file()),
             um.old_en_passant_destination.map(|s| s.file()),
@@ -518,6 +545,12 @@ impl Board {
                 );
             }
         };
+
+        assert_eq!(
+            self.hash,
+            *self.history.last().unwrap(),
+            "Did not correctly revert hash with unmake move"
+        );
     }
 
     pub fn pieces(&self) -> &PieceStorage {
@@ -534,6 +567,14 @@ impl Board {
 
     pub fn castling_rights(&self) -> CastlingRights {
         self.castling_rights
+    }
+
+    pub fn halfmoves_since_event(&self) -> u32 {
+        self.halfmoves_since_event
+    }
+
+    pub fn is_threefold(&self) -> bool {
+        self.is_threefold
     }
 }
 
@@ -645,6 +686,7 @@ pub struct UnmakeInfo {
     pub old_en_passant_destination: Option<Square>,
     pub old_castling_rights: CastlingRights,
     pub old_halfmoves_since_event: u32,
+    pub old_is_threefold: bool,
 }
 
 #[cfg(test)]
@@ -796,4 +838,33 @@ mod tests {
             "k6K/8/8/8/8/8/8/q7 w - - 0 2",
         )
     }
+
+    #[test]
+    fn test_threefold_white() {
+        let mut board = Board::starting();
+
+        let moves = vec![
+            Move::new(Square::D2, Square::D4, None),
+            Move::new(Square::E7, Square::E6, None),
+            Move::new(Square::D1, Square::D2, None),
+            Move::new(Square::E8, Square::E7, None), // Castling rights change
+            Move::new(Square::D2, Square::D1, None),
+            Move::new(Square::E7, Square::E8, None),
+            Move::new(Square::D1, Square::D2, None),
+            Move::new(Square::E8, Square::E7, None),
+            Move::new(Square::D2, Square::D1, None),
+            Move::new(Square::E7, Square::E8, None),
+            Move::new(Square::D1, Square::D2, None), // Not threefold because castling rights changed
+            Move::new(Square::E8, Square::E7, None),
+        ];
+
+        for (i, mv) in moves.iter().enumerate() {
+            let _ = board.make_move(*mv);
+
+            assert_eq!(board.is_threefold, i == moves.len() - 1);
+        }
+    }
+
+    #[test]
+    fn test_halfmove_since_event_counter() {}
 }

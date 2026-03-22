@@ -195,8 +195,26 @@ fn performance(bot: ChessBot, options: &PerformanceOptions) {
     }
 }
 
+fn cutechess() {
+    #[cfg(unix)]
+    let mut command = Command::new("cutechess");
+    #[cfg(windows)]
+    let mut command = Command::new("cutechess.exe");
+
+    match command.status() {
+        Ok(s) if s.success() => {}
+        Ok(s) => {
+            cprintln!("<r,bold>cutechess exited with bad status: {s:?}</>")
+        }
+        Err(e) => {
+            cprintln!("<r,bold>Failed to run cutechess: {e:?}</>")
+        }
+    }
+}
+
 pub fn run(options: ChessOptions, bots: Vec<ChessBot>) {
     match options.setup() {
+        MatchType::BuildAndRunCutechess => cutechess(),
         MatchType::Compliance => compliance(bots[0].clone()),
         MatchType::Performance(options) => performance(bots[0].clone(), options),
         MatchType::BotVsBot(options) => bot_vs_bot(bots[0].clone(), bots[1].clone(), options),

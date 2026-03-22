@@ -9,6 +9,14 @@ pub struct Move {
 }
 
 impl Move {
+    pub fn new(source: Square, destination: Square, promotion: Option<PieceKind>) -> Move {
+        Move {
+            source,
+            destination,
+            promotion,
+        }
+    }
+
     /// Parse a move from UCI move notation, e.g. "e7e8q"
     pub fn from_uci(s: &str) -> Option<Self> {
         if s.len() != 4 && s.len() != 5 {

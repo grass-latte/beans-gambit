@@ -8,6 +8,7 @@ use crate::uci_conversions::{from_uci_move, to_uci_piece, to_uci_square};
 use crate::uci_state::{UciOptions, UciState};
 use chess_lib::board::{Board, Move};
 use chrono::Local;
+use engine::results::Score;
 use engine::{InterMoveCache, search};
 use fern::Dispatch;
 use log::{debug, error, info, warn};
@@ -22,7 +23,9 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use std::{io, thread};
 use strum::IntoEnumIterator;
-use vampirc_uci::{UciInfoAttribute, UciMessage, UciMove, UciPiece, UciSquare, parse_one};
+use vampirc_uci::{
+    UciInfoAttribute, UciMessage, UciMove, UciPiece, UciSquare, UciTimeControl, parse_one,
+};
 
 pub const fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
@@ -167,27 +170,75 @@ fn main() {
 
                 RUNNING.store(true, Ordering::Release);
 
+                let time_remaining = match time_control {
+                    Some(UciTimeControl::Infinite) => Duration::MAX,
+                    Some(UciTimeControl::Ponder) => Duration::MAX,
+                    Some(UciTimeControl::MoveTime(d)) => {
+                        Duration::from_millis(d.num_milliseconds().try_into().unwrap())
+                    }
+                    Some(UciTimeControl::TimeLeft {
+                        white_time,
+                        black_time,
+                        ..
+                    }) => {
+                        if board.color_to_move().is_white() {
+                            white_time
+                                .map(|d| {
+                                    Duration::from_millis(d.num_milliseconds().try_into().unwrap())
+                                })
+                                .unwrap_or(Duration::MAX)
+                        } else {
+                            black_time
+                                .map(|d| {
+                                    Duration::from_millis(d.num_milliseconds().try_into().unwrap())
+                                })
+                                .unwrap_or(Duration::MAX)
+                        }
+                    }
+                    None => Duration::MAX,
+                };
+
                 let cache = cache.clone();
+                let board = board.clone();
                 thread::spawn(move || {
                     let cache = cache;
                     let mut c = cache.lock().unwrap();
                     let mut board = board;
-                    let result =
-                        search(&mut board, &mut c, || SHOULD_STOP.load(Ordering::Acquire)).unwrap();
+                    let (best_move, eval) = search(
+                        &mut board,
+                        &mut c,
+                        || SHOULD_STOP.load(Ordering::Acquire),
+                        time_remaining,
+                    );
+                    let best_move = best_move.unwrap();
 
                     // fastchess requires at least one info message with score
-                    send_uci(UciMessage::Info(vec![UciInfoAttribute::Score {
-                        cp: Some(0),
-                        mate: None,
-                        lower_bound: None,
-                        upper_bound: None,
+                    send_uci(UciMessage::Info(vec![match eval {
+                        Score::PositiveMateIn(pmi) => UciInfoAttribute::Score {
+                            cp: None,
+                            mate: Some(pmi as i8),
+                            lower_bound: None,
+                            upper_bound: None,
+                        },
+                        Score::Score(s) => UciInfoAttribute::Score {
+                            cp: Some((s * 100f32) as i32),
+                            mate: None,
+                            lower_bound: None,
+                            upper_bound: None,
+                        },
+                        Score::NegativeMateIn(nmi) => UciInfoAttribute::Score {
+                            cp: None,
+                            mate: Some(-(nmi as i8)),
+                            lower_bound: None,
+                            upper_bound: None,
+                        },
                     }]));
 
                     send_uci(UciMessage::BestMove {
                         best_move: UciMove {
-                            from: to_uci_square(result.source),
-                            to: to_uci_square(result.destination),
-                            promotion: result.promotion.map(to_uci_piece),
+                            from: to_uci_square(best_move.source),
+                            to: to_uci_square(best_move.destination),
+                            promotion: best_move.promotion.map(to_uci_piece),
                         },
                         ponder: None,
                     });

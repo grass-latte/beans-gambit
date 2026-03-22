@@ -57,6 +57,10 @@ impl Color {
             Self::Black => -1,
         }
     }
+
+    pub fn apply_color_to_score<T: std::ops::Neg<Output = T>>(&self, score: T) -> T {
+        if self.is_white() { score } else { -score }
+    }
 }
 
 impl Not for Color {
