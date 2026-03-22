@@ -6,11 +6,10 @@ use human_bytes::human_bytes;
 use rand::RngExt;
 use std::collections::HashMap;
 
-const BOOK_BYTES: &'static [u8] = include_bytes!("../static/gen/book.bin");
+const BOOK_BYTES: &[u8] = include_bytes!("../static/gen/book.bin");
 
 pub trait OpeningBook {
     fn statistics(&self) -> String;
-    fn moves_useful_for(&self) -> u8;
     fn get_fast(&self, position: BoardHash) -> Option<Move>;
     fn get_weighted(&self, position: BoardHash) -> Option<Move>;
 }
@@ -87,10 +86,6 @@ impl OpeningBook for DefaultOpeningBook {
                     + self.total_moves * size_of::<MoveEntry>()) as f32
             )
         )
-    }
-
-    fn moves_useful_for(&self) -> u8 {
-        10
     }
 
     fn get_fast(&self, position: BoardHash) -> Option<Move> {

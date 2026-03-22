@@ -1,7 +1,7 @@
 #[path = "src/shared.rs"]
 mod shared;
 
-use chess_lib::board::Board;
+use chess_lib::board::{Board, BoardFile, PieceKind};
 use std::fs;
 
 use crate::shared::{SerialisedBookMove, serialise_book_move};
@@ -65,7 +65,7 @@ fn decode_move(mv: u16, weight: u16) -> Option<BookMove> {
 pub fn load_polyglot(path: &str) -> HashMap<u64, Vec<BookMove>> {
     let bytes = fs::read(path).expect("failed to read polyglot file");
     assert!(
-        bytes.len() % 16 == 0,
+        bytes.len().is_multiple_of(16),
         "file size must be a multiple of 16 bytes"
     );
 
@@ -137,15 +137,11 @@ pub fn explore(start: &Chess, book: &HashMap<u64, Vec<BookMove>>, book_file: &mu
         // Per position logic
 
         // Write hash of location
+        let mut pos_board =
+            Board::from_fen(&Fen::from_position(&pos, shakmaty::EnPassantMode::Legal).to_string())
+                .unwrap();
         book_file
-            .write_u64::<LittleEndian>(
-                Board::from_fen(
-                    &Fen::from_position(&pos, shakmaty::EnPassantMode::Legal).to_string(),
-                )
-                .unwrap()
-                .hash()
-                .u64(),
-            )
+            .write_u64::<LittleEndian>(pos_board.hash().u64())
             .unwrap();
 
         let mut legal_moves = Vec::new();
@@ -153,16 +149,22 @@ pub fn explore(start: &Chess, book: &HashMap<u64, Vec<BookMove>>, book_file: &mu
             let Some(legal_move) = book_move_to_legal(&pos, bm) else {
                 panic!(
                     "Illegal move: {} | {:?}",
-                    Fen::from_position(&pos, shakmaty::EnPassantMode::Legal).to_string(),
+                    Fen::from_position(&pos, shakmaty::EnPassantMode::Legal),
                     bm
                 );
-                continue;
+                // continue;
             };
-
-            legal_moves.push((bm.from, bm.to, bm.promotion, bm.weight));
 
             let mut next = pos.clone();
             next.play_unchecked(legal_move);
+
+            legal_moves.push((
+                bm.from,
+                bm.to,
+                bm.promotion,
+                bm.weight,
+                Fen::from_position(&next, shakmaty::EnPassantMode::Legal).to_string(),
+            ));
 
             if visited.insert(
                 next.zobrist_hash::<Zobrist64>(shakmaty::EnPassantMode::Legal)
@@ -179,7 +181,7 @@ pub fn explore(start: &Chess, book: &HashMap<u64, Vec<BookMove>>, book_file: &mu
         }
         book_file.write_u8(legal_moves.len() as u8).unwrap();
 
-        for (from, to, promotion, weight) in legal_moves {
+        for (from, to, promotion, weight, expected_fen) in legal_moves {
             fn convert_square(square: &Square) -> chess_lib::board::Square {
                 unsafe {
                     chess_lib::board::Square::at_xy_unchecked(
@@ -189,23 +191,59 @@ pub fn explore(start: &Chess, book: &HashMap<u64, Vec<BookMove>>, book_file: &mu
                 }
             }
 
-            fn convert_role(role: &Role) -> chess_lib::board::PieceKind {
+            fn convert_role(role: &Role) -> PieceKind {
                 match role {
-                    Role::Pawn => chess_lib::board::PieceKind::Pawn,
-                    Role::Knight => chess_lib::board::PieceKind::Knight,
-                    Role::Bishop => chess_lib::board::PieceKind::Bishop,
-                    Role::Rook => chess_lib::board::PieceKind::Rook,
-                    Role::Queen => chess_lib::board::PieceKind::Queen,
-                    Role::King => chess_lib::board::PieceKind::King,
+                    Role::Pawn => PieceKind::Pawn,
+                    Role::Knight => PieceKind::Knight,
+                    Role::Bishop => PieceKind::Bishop,
+                    Role::Rook => PieceKind::Rook,
+                    Role::Queen => PieceKind::Queen,
+                    Role::King => PieceKind::King,
                 }
             }
 
+            let from = convert_square(from);
+            let original_to = *to;
+            let mut to = convert_square(to);
+
+            // TODO: Remove after board is made tolerant of castling by moving king to edge
+            // Castling represented as moving to corner for some reason
+            if pos_board.pieces().get(from).unwrap().kind() == PieceKind::King
+                && ((to.file().as_u8() as i8) - (from.file().as_u8() as i8)).abs() > 2
+            {
+                let delta = (to.file().as_u8() as i8) - (from.file().as_u8() as i8);
+                // -4 * 2 = -8
+                // -8 / 4 = -2
+                let delta = (delta * 2) / delta.abs();
+                to = chess_lib::board::Square::at(
+                    BoardFile::from_u8(((from.file().as_u8() as i8) + delta) as u8).unwrap(),
+                    to.rank(),
+                )
+            }
+
+            let promotion = promotion.as_ref().map(convert_role);
+            let weight = *weight;
+
+            let pre_fen = pos_board.to_fen();
+            let um = pos_board.make_move(chess_lib::board::Move {
+                source: from,
+                destination: to,
+                promotion,
+            });
+            assert_eq!(
+                pos_board.hash(),
+                Board::from_fen(expected_fen).unwrap().hash(),
+                "\n{pre_fen}\n{from:?} {to:?}[{original_to}] {promotion:?}\n{} vs. {expected_fen}",
+                pos_board.to_fen(),
+            );
+            pos_board.unmake_last_move(um);
+
             book_file
                 .write(&serialise_book_move(SerialisedBookMove {
-                    from: convert_square(from),
-                    to: convert_square(to),
-                    promotion: promotion.as_ref().map(|r| convert_role(r)),
-                    weight: *weight,
+                    from,
+                    to,
+                    promotion,
+                    weight,
                 }))
                 .unwrap();
         }

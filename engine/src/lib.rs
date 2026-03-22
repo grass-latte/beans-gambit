@@ -24,6 +24,7 @@ pub struct InterMoveCache {
     // (depth searched, eval)
     // Evals from perspective of white
     pub(crate) transposition_table: TranspositionTable,
+    pub(crate) left_opening_book: bool,
 }
 
 impl Default for InterMoveCache {
@@ -36,6 +37,7 @@ impl InterMoveCache {
     pub fn new() -> InterMoveCache {
         InterMoveCache {
             transposition_table: TranspositionTable::new(),
+            left_opening_book: false,
         }
     }
 
@@ -60,10 +62,14 @@ pub fn search(
         time_management_strat
     );
 
-    if let Some(opening_book) = opening_book {
+    if !cache.left_opening_book
+        && let Some(opening_book) = opening_book
+    {
         if let Some(mv) = opening_book.get_weighted(board.hash()) {
             info!("Playing book move {:?}", mv);
             return (Some(mv), Score::ZERO);
+        } else {
+            cache.left_opening_book = true;
         }
     }
 

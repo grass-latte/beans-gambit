@@ -3,3 +3,7 @@ Still unconvinced that a bot will intentionally try to draw where suitable
 rnbqkb1r/2p1p2p/1p1p1np1/4N3/3PP3/2N2Q2/P1P2PPP/2R2RK1 w - - 0 12
 position startpos moves d2d4 a7a5 e2e4 a5a4 b1c3 b7b6 g1f3 a4a3 f1c4 a3b2 c4f7 e8f7 f3e5 f7e8 d1h5 g7g6 h5f3 b2c1q a1c1 g8f6 e1g1 d7d6
 go infinite
+
+2rq1rk1/1p1nbpp1/p2p4/3Pp2p/8/1N1QBP2/PPP3PP/K6R w - - 1 16
+position startpos moves e2e4 c7c5 g1f3 d7d6 d2d4 c5d4 f3d4 g8f6 b1c3 a7a6 f2f3 e7e5 d4b3 c8e6 c1e3 f8e7 d1d2 h7h5 e1a1 b8d7 c3d5 a8c8 f1e2 f6d5 e4d5 e6f5 e2d3 f5d3 d2d3 e8g8
+go infinite
