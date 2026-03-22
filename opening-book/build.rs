@@ -4,7 +4,7 @@ mod shared;
 use chess_lib::board::{Board, BoardFile, PieceKind};
 use std::fs;
 
-use crate::shared::{serialise_book_move, SerialisedBookMove};
+use crate::shared::{SerialisedBookMove, serialise_book_move};
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
 use shakmaty::fen::Fen;
 use shakmaty::zobrist::Zobrist64;
