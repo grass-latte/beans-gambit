@@ -33,9 +33,9 @@ impl PartialOrd for Score {
                 _ => Some(Ordering::Greater),
             },
             Score::Score(s) => match other {
-                Score::PositiveMateIn(_) => Some(Ordering::Greater),
+                Score::PositiveMateIn(_) => Some(Ordering::Less),
                 Score::Score(os) => s.partial_cmp(os), // We want a bigger score
-                Score::NegativeMateIn(_) => Some(Ordering::Less),
+                Score::NegativeMateIn(_) => Some(Ordering::Greater),
             },
             Score::NegativeMateIn(nmi) => {
                 match other {

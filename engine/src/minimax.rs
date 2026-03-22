@@ -42,13 +42,16 @@ where
         return (SearchResult::poisoned(Score::ZERO), MoveType::Draw); // immediate draw
     }
 
-    let (score, mv) = minimax_inner(toplevel, board, cache, depth_remaining, prune, stop_fn);
+    let (score, mt) = minimax_inner(toplevel, board, cache, depth_remaining, prune, stop_fn);
+    if mt == MoveType::Interrupted {
+        return (score, mt);
+    }
 
     if board.halfmoves_since_event() >= 100 && score.score <= Score::ZERO {
         // Assume current player will choose draw if in a bad position
         (SearchResult::poisoned(Score::ZERO), MoveType::Draw)
     } else {
-        (score, mv)
+        (score, mt)
     }
 }
 
@@ -127,7 +130,7 @@ where
     let mut best_move = options[0];
     let um = board.make_move(options[0]);
     // Minimax returns opponent's score
-    let (mr, _) = minimax(
+    let (sr, mt) = minimax(
         false,
         board,
         cache,
@@ -135,17 +138,20 @@ where
         Score::NEG_INF,
         stop_fn,
     );
+    if mt == MoveType::Interrupted {
+        return (sr, mt);
+    }
     #[cfg(debug_assertions)]
     let SearchResult {
         score: eval,
         mut poisoned,
         backtrace: mut best_backtrace,
-    } = -mr;
+    } = -sr;
     #[cfg(not(debug_assertions))]
     let SearchResult {
         score: eval,
         mut poisoned,
-    } = -mr;
+    } = -sr;
     let mut best_eval = eval.increment_mate_in();
     board.unmake_last_move(um);
 
@@ -173,19 +179,23 @@ where
         let um = board.make_move(mv);
 
         // Minimax returns opponent's score
-        let (mr, _) = minimax(false, board, cache, depth_remaining - 1, best_eval, stop_fn);
+        let (sr, mt) = minimax(false, board, cache, depth_remaining - 1, best_eval, stop_fn);
+        if mt == MoveType::Interrupted {
+            return (sr, mt);
+        }
+
         #[cfg(debug_assertions)]
         let SearchResult {
             score: ev,
             poisoned: np,
             backtrace,
-        } = -mr;
+        } = -sr;
         #[cfg(not(debug_assertions))]
         let SearchResult {
             score: ev,
             poisoned: np,
             ..
-        } = -mr;
+        } = -sr;
         let ev = ev.increment_mate_in();
         poisoned |= np;
         board.unmake_last_move(um);
@@ -272,15 +282,14 @@ pub fn search_minimax(
     let mut eval_after_move = eval(board);
     board.unmake_last_move(um);
 
-    // TODO: TEMP
-    let mut search_depth: usize = 6; // Keep even to eval on our turn
+    let mut search_depth: usize = 2; // Keep even to eval on our turn
 
     loop {
         info!("Starting search at depth {search_depth}");
 
         let start = Instant::now();
 
-        let (mr, best_move_at_sd) = minimax(
+        let (sr, best_move_at_sd) = minimax(
             true,
             board,
             cache,
@@ -292,6 +301,7 @@ pub fn search_minimax(
         let time_taken = start.elapsed();
 
         info!("Completed depth {} in {:?}", search_depth, start.elapsed());
+
         match best_move_at_sd {
             MoveType::Move(mv) => best_move = Some(mv),
             MoveType::Draw => best_move = None, // TODO: UCI doesn't support choosing to draw
@@ -303,8 +313,8 @@ pub fn search_minimax(
             }
         };
 
-        debug!("Minimax Result {:#?} | {:?}", mr, best_move);
-        eval_after_move = mr.score;
+        debug!("Minimax Result {:#?} | {:?}", sr, best_move);
+        eval_after_move = sr.score;
 
         // Assume next iteration will take 120x current iteration
         const ITERATION_COST_FACTOR: u32 = 120;
