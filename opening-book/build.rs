@@ -4,7 +4,7 @@ mod shared;
 use chess_lib::board::{Board, BoardFile, PieceKind};
 use std::fs;
 
-use crate::shared::{SerialisedBookMove, serialise_book_move};
+use crate::shared::{serialise_book_move, SerialisedBookMove};
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt, WriteBytesExt};
 use shakmaty::fen::Fen;
 use shakmaty::zobrist::Zobrist64;
@@ -239,7 +239,7 @@ pub fn explore(start: &Chess, book: &HashMap<u64, Vec<BookMove>>, book_file: &mu
             pos_board.unmake_last_move(um);
 
             book_file
-                .write(&serialise_book_move(SerialisedBookMove {
+                .write_all(&serialise_book_move(SerialisedBookMove {
                     from,
                     to,
                     promotion,

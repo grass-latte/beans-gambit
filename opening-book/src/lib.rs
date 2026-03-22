@@ -94,9 +94,7 @@ impl OpeningBook for DefaultOpeningBook {
 
     fn get_weighted(&self, position: BoardHash) -> Option<Move> {
         let mut rng = rand::rng();
-        let Some((total, options)) = self.book.get(&position) else {
-            return None;
-        };
+        let (total, options) = self.book.get(&position)?;
 
         let mut selection = rng.random_range(0..*total);
 
