@@ -164,31 +164,51 @@ pub fn resolve_remote_bot(version: String) -> ChessBot {
             );
         }
 
-        if fs::exists(format!("versions/{version}")).unwrap_or(false)
-            && fs::remove_dir_all(format!("versions/{version}")).is_err()
-        {
-            panic!(
-                "{}",
-                cformat!("<r,bold>Failed to remove versions/{version}</>")
-            );
-        }
+        if fs::exists(format!("versions/{version}")).unwrap_or(false) {
+            cprintln!("<c,bold>Version folder already exists - git resetting...</>");
+            let mut git_reset = Command::new("git")
+                .current_dir(format!("versions/{version}"))
+                .arg("reset")
+                .arg("--hard")
+                .status()
+                .is_ok_and(|s| s.success());
 
-        let Ok(status) = Command::new("git")
-            .arg("clone")
-            .arg("-b")
-            .arg(format!("versions/{version}"))
-            .arg("https://github.com/grass-latte/beans-gambit.git")
-            .arg(format!("versions/{version}"))
-            .status()
-        else {
-            panic!("{}", cformat!("<r,bold>Failed to run git command</>"));
-        };
+            if git_reset {
+                git_reset = Command::new("git")
+                    .current_dir(format!("versions/{version}"))
+                    .arg("pull")
+                    .status()
+                    .is_ok_and(|s| s.success());
+            }
 
-        if !status.success() {
-            panic!(
-                "{}",
-                cformat!("<r,bold>git clone of branch versions/{version} failed</>")
-            );
+            if !git_reset {
+                cprintln!("<r,bold>git reset / pull failed. Deleting and redownloading...</>");
+
+                if fs::remove_dir_all(format!("versions/{version}")).is_err() {
+                    panic!(
+                        "{}",
+                        cformat!("<r,bold>Failed to remove versions/{version}</>")
+                    );
+                }
+
+                let Ok(status) = Command::new("git")
+                    .arg("clone")
+                    .arg("-b")
+                    .arg(format!("versions/{version}"))
+                    .arg("https://github.com/grass-latte/beans-gambit.git")
+                    .arg(format!("versions/{version}"))
+                    .status()
+                else {
+                    panic!("{}", cformat!("<r,bold>Failed to run git command</>"));
+                };
+
+                if !status.success() {
+                    panic!(
+                        "{}",
+                        cformat!("<r,bold>git clone of branch versions/{version} failed</>")
+                    );
+                }
+            }
         }
 
         VERSIONS_FETCHED.lock().unwrap().insert(version.clone());
