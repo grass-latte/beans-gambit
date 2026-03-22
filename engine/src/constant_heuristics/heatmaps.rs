@@ -2,6 +2,7 @@
 
 // A1 = index 0, B1 = 1, ..., H8 = 63
 
+pub const PAWN_HEATMAP_SCALE: f32 = 5.0;
 #[rustfmt::skip]
 pub const PAWN_HEATMAP: [f32; 64] = [
     0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
@@ -14,6 +15,7 @@ pub const PAWN_HEATMAP: [f32; 64] = [
     0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
 ];
 
+pub const KNIGHT_HEATMAP_SCALE: f32 = 5.0;
 #[rustfmt::skip]
 pub const KNIGHT_HEATMAP: [f32; 64] = [
    -5.0, -4.0, -3.0, -3.0, -3.0, -3.0, -4.0, -5.0,
@@ -26,6 +28,7 @@ pub const KNIGHT_HEATMAP: [f32; 64] = [
    -5.0, -4.0, -3.0, -3.0, -3.0, -3.0, -4.0, -5.0,
 ];
 
+pub const BISHOP_HEATMAP_SCALE: f32 = 2.0;
 #[rustfmt::skip]
 pub const BISHOP_HEATMAP: [f32; 64] = [
    -2.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -2.0,
@@ -38,6 +41,7 @@ pub const BISHOP_HEATMAP: [f32; 64] = [
    -2.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -2.0,
 ];
 
+pub const ROOK_HEATMAP_SCALE: f32 = 1.0;
 #[rustfmt::skip]
 pub const ROOK_HEATMAP: [f32; 64] = [
     0.0,  0.0,  0.5,  1.0,  1.0,  0.5,  0.0,  0.0,
@@ -50,6 +54,7 @@ pub const ROOK_HEATMAP: [f32; 64] = [
     0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,
 ];
 
+pub const QUEEN_HEATMAP_SCALE: f32 = 2.0;
 #[rustfmt::skip]
 pub const QUEEN_HEATMAP: [f32; 64] = [
    -2.0, -1.0, -1.0, -0.5, -0.5, -1.0, -1.0, -2.0,
@@ -62,6 +67,7 @@ pub const QUEEN_HEATMAP: [f32; 64] = [
    -2.0, -1.0, -1.0, -0.5, -0.5, -1.0, -1.0, -2.0,
 ];
 
+pub const KING_HEATMAP_SCALE: f32 = 5.0;
 #[rustfmt::skip]
 pub const KING_HEATMAP: [f32; 64] = [
    -3.0, -4.0, -4.0, -5.0, -5.0, -4.0, -4.0, -3.0,
