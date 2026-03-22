@@ -1,0 +1,34 @@
+[Event "?"]
+[Site "?"]
+[Date "2026.03.22"]
+[Round "?"]
+[White "beans-release"]
+[Black "beans-0.3.0"]
+[Result "1/2-1/2"]
+[ECO "A40"]
+[GameDuration "00:08:17"]
+[GameEndTime "2026-03-22T01:55:25.274 GMT"]
+[GameStartTime "2026-03-22T01:47:07.968 GMT"]
+[Opening "Queen's pawn"]
+[PlyCount "93"]
+[TimeControl "40/300"]
+
+1. d4 {4.0s} a5 {5.1s} 2. e4 {5.7s} a4 {11s} 3. Nc3 {14s} b6 {11s} 4. d5 {15s}
+c5 {10s} 5. Nf3 {9.6s} a3 {7.9s} 6. bxa3 {5.0s} c4 {8.1s} 7. Be3 {7.8s}
+Rxa3 {6.6s} 8. Qd4 {16s} b5 {7.3s} 9. e5 {2.0s} d6 {9.3s} 10. Bxc4 {13s}
+bxc4 {1.7s} 11. Ne4 {12s} Qa5+ {5.3s} 12. Bd2 {13s} Qb5 {5.8s} 13. Nc3 {5.7s}
+Qc5 {6.7s} 14. Qxc5 {4.5s} dxc5 {0.71s} 15. O-O-O {7.5s} Bg4 {3.4s}
+16. Nb5 {4.0s} Rxa2 {1.4s} 17. Kb1 {6.5s} Ra4 {3.1s} 18. e6 {7.5s} fxe6 {0.48s}
+19. Nc7+ {3.0s} Kd7 {0.073s} 20. Nxe6 {3.3s} Bxe6 {0.79s} 21. dxe6+ {4.7s}
+Kxe6 {0.50s} 22. Rhe1+ {5.0s} Kf5 {0.44s} 23. Re5+ {3.5s} Kf6 {0.32s}
+24. Rxc5 {5.0s} e5 {2.2s} 25. Bg5+ {1.2s} Kf5 {0.62s} 26. Rxe5+ {6.5s}
+Kg4 {0.25s} 27. h3+ {1.9s} Kh5 {0.048s} 28. Bd2+ {2.1s} Kg6 {0.30s}
+29. Rg5+ {8.7s} Kf6 {0.53s} 30. Bc3+ {1.1s} Ke7 {1.1s} 31. Re5+ {1.2s}
+Kf7 {0.47s} 32. Ng5+ {0.98s} Kg6 {0.23s} 33. Ne4 {8.5s} Ra6 {3.9s}
+34. Rg5+ {9.5s} Kh6 {0.40s} 35. Bd2 {0.80s} Bb4 {0.95s} 36. Bc1 {0.79s}
+Ne7 {2.3s} 37. Rg4+ {2.0s} g5 {0.094s} 38. Bxg5+ {0.81s} Kh5 {0.11s}
+39. Ng3+ {5.3s} Kg6 {0.042s} 40. Bxe7+ {0.64s} Kf7 {0.18s} 41. Bxb4 {12s}
+c3 {6.3s} 42. Bxc3 {6.1s} Rb6+ {5.8s} 43. Ka1 {6.4s} Ra6+ {6.3s} 44. Kb1 {3.0s}
+Rb6+ {5.7s} 45. Ka1 {30s} Ra6+ {6.2s} 46. Kb2 {36s} Rb6+ {6.1s}
+47. Ka1 {15s, Draw by 3-fold repetition} 1/2-1/2
+

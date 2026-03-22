@@ -48,7 +48,7 @@ pub fn search(
         board,
         cache,
         stop_fn,
-        min(Duration::from_secs(15), time_remaining / 10),
+        min(Duration::from_secs(20), time_remaining / 10),
         TimeManagementStrat::TargetLimit,
     )
 }

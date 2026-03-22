@@ -4,6 +4,7 @@ use std::cmp::Ordering;
 use std::ops::Neg;
 
 // TODO: Optimise into f32 / smaller type?
+// TODO: Write tests
 #[derive(PartialEq, Clone, Copy, Debug)]
 pub enum Score {
     PositiveMateIn(u8), // +inf
@@ -65,6 +66,8 @@ pub(crate) struct SearchResult {
     pub poisoned: bool, // Don't add to cache - impure considerations affected eval
     #[cfg(debug_assertions)]
     pub backtrace: Backtrace,
+    #[cfg(debug_assertions)]
+    pub fen: String,
 }
 
 impl SearchResult {
@@ -76,6 +79,7 @@ impl SearchResult {
                 score,
                 poisoned,
                 backtrace,
+                fen: String::new(),
             }
         }
         #[cfg(not(debug_assertions))]
@@ -83,11 +87,17 @@ impl SearchResult {
     }
 
     #[cfg(debug_assertions)]
-    pub fn new_backtrace(score: Score, poisoned: bool, backtrace: Backtrace) -> SearchResult {
+    pub fn new_backtrace(
+        score: Score,
+        poisoned: bool,
+        backtrace: Backtrace,
+        fen: String,
+    ) -> SearchResult {
         SearchResult {
             score,
             poisoned,
             backtrace,
+            fen,
         }
     }
 
@@ -99,6 +109,7 @@ impl SearchResult {
                 score,
                 poisoned: false,
                 backtrace,
+                fen: String::new(),
             }
         }
         #[cfg(not(debug_assertions))]
@@ -116,6 +127,7 @@ impl SearchResult {
                 score,
                 poisoned: true,
                 backtrace,
+                fen: String::new(),
             }
         }
         #[cfg(not(debug_assertions))]
@@ -135,6 +147,7 @@ impl Neg for SearchResult {
                 score: -self.score,
                 poisoned: self.poisoned,
                 backtrace: self.backtrace,
+                fen: self.fen,
             }
         }
         #[cfg(not(debug_assertions))]

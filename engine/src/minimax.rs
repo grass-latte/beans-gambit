@@ -42,6 +42,11 @@ where
         return (SearchResult::poisoned(Score::ZERO), MoveType::Draw); // immediate draw
     }
 
+    // TODO: Should this be forced?
+    if board.is_threefold() {
+        return (SearchResult::poisoned(Score::ZERO), MoveType::Draw);
+    }
+
     let (score, mt) = minimax_inner(toplevel, board, cache, depth_remaining, prune, stop_fn);
     if mt == MoveType::Interrupted {
         return (score, mt);
@@ -74,6 +79,12 @@ where
             return (SearchResult::poisoned(Score::ZERO), MoveType::Draw);
         }
 
+        #[cfg(debug_assertions)]
+        return (
+            SearchResult::new_backtrace(score, false, Backtrace::capture(), board.to_fen()),
+            MoveType::Eval,
+        );
+        #[cfg(not(debug_assertions))]
         return (SearchResult::normal(score), MoveType::Eval);
     }
 
@@ -81,7 +92,7 @@ where
     // move selection in previously seen position
     if !toplevel
         && let Some(hd) = cache.transposition_table.get(&board.hash())
-        && hd.depth_searched > depth_remaining
+        && hd.depth_searched >= depth_remaining
     // Otherwise will be replaced by deeper search
     {
         let score = if board.color_to_move().is_white() {
@@ -138,14 +149,16 @@ where
         Score::NEG_INF,
         stop_fn,
     );
+    board.unmake_last_move(um);
     if mt == MoveType::Interrupted {
-        return (sr, mt);
+        return (-sr, mt);
     }
     #[cfg(debug_assertions)]
     let SearchResult {
         score: eval,
         mut poisoned,
         backtrace: mut best_backtrace,
+        fen: mut best_fen,
     } = -sr;
     #[cfg(not(debug_assertions))]
     let SearchResult {
@@ -153,7 +166,6 @@ where
         mut poisoned,
     } = -sr;
     let mut best_eval = eval.increment_mate_in();
-    board.unmake_last_move(um);
 
     if best_eval > -prune {
         // Branch will be pruned
@@ -180,8 +192,10 @@ where
 
         // Minimax returns opponent's score
         let (sr, mt) = minimax(false, board, cache, depth_remaining - 1, best_eval, stop_fn);
+        board.unmake_last_move(um);
+
         if mt == MoveType::Interrupted {
-            return (sr, mt);
+            return (-sr, mt);
         }
 
         #[cfg(debug_assertions)]
@@ -189,6 +203,7 @@ where
             score: ev,
             poisoned: np,
             backtrace,
+            fen,
         } = -sr;
         #[cfg(not(debug_assertions))]
         let SearchResult {
@@ -198,7 +213,6 @@ where
         } = -sr;
         let ev = ev.increment_mate_in();
         poisoned |= np;
-        board.unmake_last_move(um);
 
         // TODO: Should we early return for checkmates?
 
@@ -208,6 +222,7 @@ where
             #[cfg(debug_assertions)]
             {
                 best_backtrace = backtrace;
+                best_fen = fen;
             }
 
             if best_eval > -prune {
@@ -243,7 +258,7 @@ where
 
     #[cfg(debug_assertions)]
     return (
-        SearchResult::new_backtrace(best_eval, poisoned, best_backtrace),
+        SearchResult::new_backtrace(best_eval, poisoned, best_backtrace, best_fen),
         MoveType::Move(best_move),
     );
     #[cfg(not(debug_assertions))]
@@ -253,6 +268,7 @@ where
     )
 }
 
+// TODO: Write tests
 pub fn search_minimax(
     board: &mut Board,
     cache: &mut InterMoveCache,
@@ -316,14 +332,14 @@ pub fn search_minimax(
         debug!("Minimax Result {:#?} | {:?}", sr, best_move);
         eval_after_move = sr.score;
 
-        // Assume next iteration will take 120x current iteration
-        const ITERATION_COST_FACTOR: u32 = 120;
+        // Assume next iteration will take 600x current iteration
+        const ITERATION_COST_FACTOR: u32 = 10;
         if Instant::now() + (time_taken * ITERATION_COST_FACTOR) > limit {
             info!("Next depth expected to take to long");
             break;
         }
 
-        search_depth += 2;
+        search_depth += 1;
     }
 
     info!("Best move: {:?}", best_move);
