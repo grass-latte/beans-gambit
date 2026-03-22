@@ -15,3 +15,5 @@ versions/
 flamegraph.svg
 perf.data
 perf.data.old
+
+extra-bots

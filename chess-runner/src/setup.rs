@@ -6,6 +6,7 @@ use dialoguer::theme::ColorfulTheme;
 use dialoguer::{Input, Select};
 use either::Either;
 use serde::{Deserialize, Serialize};
+use std::fs;
 use std::process::Command;
 use std::str::FromStr;
 use std::sync::LazyLock;
@@ -195,6 +196,8 @@ pub enum LocalBot {
     BeansGambitLocal,
     #[strum(serialize = "Stockfish")]
     Stockfish,
+    #[strum(serialize = "Chess-Coding-Adventure")]
+    ChessCodingAdventure,
 }
 
 impl LocalBot {
@@ -205,6 +208,12 @@ impl LocalBot {
             options.push(LocalBot::Stockfish.to_string());
         } else {
             cprintln!("<yellow,bold>Stockfish not found</>");
+        }
+
+        if fs::exists("extra-bots/Chess-Coding-Adventure").is_ok_and(|b| b) {
+            options.push(LocalBot::ChessCodingAdventure.to_string());
+        } else {
+            cprintln!("<yellow,bold>Chess-Coding-Adventure bot not found</>");
         }
 
         options
