@@ -51,7 +51,7 @@ impl MatchType {
     pub fn setup_bot_vs_bot() -> MatchType {
         let selection = Select::with_theme(&ColorfulTheme::default())
             .with_prompt("Configure Bot v Bot")
-            .items(&vec!["Default", "Custom"])
+            .items(vec!["Default", "Custom"])
             .default(0)
             .interact()
             .unwrap();
@@ -80,7 +80,7 @@ impl MatchType {
     pub fn setup_performance() -> MatchType {
         let selection = Select::with_theme(&ColorfulTheme::default())
             .with_prompt("Configure Performance Test")
-            .items(&vec!["Default Game", "Custom Fen"])
+            .items(vec!["Default Game", "Custom Fen"])
             .default(0)
             .interact()
             .unwrap();
