@@ -8,10 +8,6 @@
         repo = "nixpkgs";
         ref = "nixos-25.11";
       };
-#      rust-overlay = {
-#        url = "github:oxalica/rust-overlay";
-#        inputs.nixpkgs.follows = "nixpkgs";
-#      };
       flake-utils.url = "github:numtide/flake-utils";
     };
 
@@ -21,6 +17,10 @@
         pkgs = import nixpkgs {
           inherit system;
 #          overlays = [ rust-overlay.overlays.default ];
+            config.permittedInsecurePackages = [
+            "dotnet-sdk-6.0.428"
+            "dotnet-runtime-6.0.36"
+          ];
         };
 
         packages = with pkgs; [
@@ -30,7 +30,8 @@
         ];
 
         nativeBuildPackages = with pkgs; [
-
+            dotnetCorePackages.sdk_6_0
+            dotnet-runtime_6
         ];
 
         libraries = with pkgs; [
@@ -43,6 +44,8 @@
           buildInputs = packages;
 
           nativeBuildInputs = nativeBuildPackages;
+
+          DOTNET_BIN = "${pkgs.dotnetCorePackages.sdk_6_0}/bin/dotnet";
 
           env = {
 

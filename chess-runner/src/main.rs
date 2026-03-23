@@ -1,5 +1,4 @@
 mod bot_resolver;
-pub mod options;
 mod run;
 pub mod setup;
 mod stockfish_ladder;

@@ -8,14 +8,17 @@ use crate::uci_conversions::{from_uci_move, to_uci_piece, to_uci_square};
 use crate::uci_state::{UciOptions, UciState};
 use chess_lib::board::{Board, Move};
 use chrono::Local;
+use deepsize::DeepSizeOf;
 use engine::results::Score;
 use engine::{InterMoveCache, search};
 use fern::Dispatch;
+use human_bytes::human_bytes;
 use log::{debug, error, info, warn};
+use opening_book::{DefaultOpeningBook, OpeningBook};
 use std::borrow::Borrow;
 use std::fs::File;
 use std::io::{BufRead, Write};
-use std::ops::DerefMut;
+use std::ops::{Deref, DerefMut};
 use std::process::exit;
 use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -86,20 +89,21 @@ fn main() {
     let mut state = UciState::new();
     let mut board = Board::starting();
     let cache = Arc::new(Mutex::new(InterMoveCache::new()));
+    let opening_book: Arc<Mutex<DefaultOpeningBook>> =
+        Arc::new(Mutex::new(DefaultOpeningBook::initialise()));
 
-    println!(
-        "Beans Gambit UCI v{} [Bot v{} | Chess Lib v{}]",
+    let info_text = format!(
+        "Beans Gambit UCI v{} [Bot v{} | Chess Lib v{} | {} cache]",
         version(),
         engine::version(),
-        chess_lib::version()
-    );
-
-    info!(
-        "Beans Gambit UCI v{} [Bot v{} | Chess Lib v{}]",
-        version(),
-        engine::version(),
-        chess_lib::version()
-    );
+        chess_lib::version(),
+        human_bytes(cache.lock().unwrap().size_bytes() as f64)
+    ) + "\n"
+        + &format!("Hash: {}", Board::starting().hash())
+        + "\n"
+        + &opening_book.lock().unwrap().statistics();
+    println!("{info_text}");
+    info!("{info_text}");
 
     info!("Waiting for stdin");
 
@@ -199,9 +203,11 @@ fn main() {
                 };
 
                 let cache = cache.clone();
+                let opening_book = opening_book.clone();
                 let board = board.clone();
                 thread::spawn(move || {
                     let cache = cache;
+                    let opening_book = opening_book;
                     let mut c = cache.lock().unwrap();
                     let mut board = board;
                     let (best_move, eval) = search(
@@ -209,6 +215,7 @@ fn main() {
                         &mut c,
                         || SHOULD_STOP.load(Ordering::Acquire),
                         time_remaining,
+                        Some(opening_book.lock().unwrap().deref()),
                     );
                     let best_move = best_move.unwrap();
 

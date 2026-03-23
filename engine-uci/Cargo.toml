@@ -1,15 +1,18 @@
 [package]
 name = "engine-uci"
-version = "0.4.4"
+version = "0.5.0"
 edition = "2024"
 
 [dependencies]
 engine = { path = "../engine" }
 chess-lib = { path = "../chess-lib" }
+opening-book = { path = "../opening-book" }
 
-strum = "0.27.2"
-strum_macros = "0.27.2"
+strum = "0.28.0"
+strum_macros = "0.28.0"
 vampirc-uci = "0.11.1"
 log = "0.4.29"
 fern = "0.7.1"
 chrono = "0.4.42"
+human_bytes = "0.4.3"
+deepsize = "0.2.0"

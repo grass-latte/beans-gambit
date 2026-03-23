@@ -148,6 +148,13 @@ pub fn resolve_local_bot(local_bot: LocalBot) -> ChessBot {
                 .display()
                 .to_string(),
         },
+        LocalBot::ChessCodingAdventure => ChessBot {
+            name: "Chess-Coding-Adventure".to_string(),
+            path: PathBuf::from_str("./extra-bots/Chess-Coding-Adventure")
+                .unwrap()
+                .display()
+                .to_string(),
+        },
     }
 }
 

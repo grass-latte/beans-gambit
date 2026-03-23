@@ -1,0 +1,14 @@
+[package]
+name = "opening-book"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+chess-lib = { path = "../chess-lib" }
+rand = "0.10.0"
+human_bytes = "0.4.3"
+
+[build-dependencies]
+chess-lib = { path = "../chess-lib" }
+shakmaty = "0.30.0"
+byteorder = "1.5.0"

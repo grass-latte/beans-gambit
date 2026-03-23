@@ -262,6 +262,7 @@ impl Board {
         output
     }
 
+    // TODO: Make tolerant of castling by moving king to edge - some opening books use this form and cutechess seems tolerant of it
     pub fn make_move(&mut self, mv: Move) -> UnmakeInfo {
         let source_piece = self
             .pieces
@@ -338,7 +339,7 @@ impl Board {
                 );
             }
             (PieceKind::King, _, (2, _), _) => {
-                // Short
+                // Short castle
                 (self.hash, self.castling_rights) = self
                     .castling_rights
                     .without_color(self.hash, source_piece.color());
@@ -400,30 +401,44 @@ impl Board {
                     .pieces
                     .set(self.hash, mv.destination, Some(source_piece));
 
-                // Void castling rights if moving king or rooks.
-                match source_piece.kind() {
-                    PieceKind::King => {
-                        (self.hash, self.castling_rights) = self
-                            .castling_rights
-                            .without_color(self.hash, source_piece.color());
-                    }
+                // Void castling rights if moving king or rooks, or if rook is taken
+                (self.hash, self.castling_rights) = match source_piece.kind() {
+                    PieceKind::King => self
+                        .castling_rights
+                        .without_color(self.hash, source_piece.color()),
                     PieceKind::Rook
                         if mv.source
                             == Square::at(BoardFile::H, source_piece.color().back_rank()) =>
                     {
-                        (self.hash, self.castling_rights) = self
-                            .castling_rights
-                            .without_kingside(self.hash, source_piece.color());
+                        self.castling_rights
+                            .without_kingside(self.hash, source_piece.color())
                     }
                     PieceKind::Rook
                         if mv.source
                             == Square::at(BoardFile::A, source_piece.color().back_rank()) =>
                     {
-                        (self.hash, self.castling_rights) = self
-                            .castling_rights
-                            .without_queenside(self.hash, source_piece.color());
+                        self.castling_rights
+                            .without_queenside(self.hash, source_piece.color())
                     }
-                    _ => {}
+                    _ => (self.hash, self.castling_rights),
+                };
+
+                if destination_piece.is_some_and(|k| k == PieceKind::Rook) {
+                    (self.hash, self.castling_rights) = match mv.destination {
+                        Square::A1 => self
+                            .castling_rights
+                            .without_queenside(self.hash, Color::White),
+                        Square::H1 => self
+                            .castling_rights
+                            .without_kingside(self.hash, Color::White),
+                        Square::A8 => self
+                            .castling_rights
+                            .without_queenside(self.hash, Color::Black),
+                        Square::H8 => self
+                            .castling_rights
+                            .without_kingside(self.hash, Color::Black),
+                        _ => (self.hash, self.castling_rights),
+                    };
                 }
             }
         };
@@ -689,6 +704,7 @@ pub struct UnmakeInfo {
     pub old_is_threefold: bool,
 }
 
+// TODO: Add test that if rook is take, castling privileges removed
 #[cfg(test)]
 mod tests {
     use super::*;

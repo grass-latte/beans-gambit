@@ -11,6 +11,8 @@ use crate::minimax::{TimeManagementStrat, search_minimax};
 use crate::results::Score;
 use crate::tt::TranspositionTable;
 use chess_lib::board::{Board, Move};
+use log::info;
+use opening_book::OpeningBook;
 use std::cmp::min;
 use std::time::Duration;
 
@@ -22,6 +24,7 @@ pub struct InterMoveCache {
     // (depth searched, eval)
     // Evals from perspective of white
     pub(crate) transposition_table: TranspositionTable,
+    pub(crate) left_opening_book: bool,
 }
 
 impl Default for InterMoveCache {
@@ -34,7 +37,12 @@ impl InterMoveCache {
     pub fn new() -> InterMoveCache {
         InterMoveCache {
             transposition_table: TranspositionTable::new(),
+            left_opening_book: false,
         }
+    }
+
+    pub fn size_bytes(&self) -> usize {
+        self.transposition_table.size_bytes()
     }
 }
 
@@ -43,12 +51,33 @@ pub fn search(
     cache: &mut InterMoveCache,
     stop_fn: fn() -> bool,
     time_remaining: Duration,
+    opening_book: Option<&dyn OpeningBook>,
 ) -> (Option<Move>, Score) {
+    let target_move_time = min(Duration::from_secs(20), time_remaining / 10);
+    let time_management_strat = TimeManagementStrat::TargetLimit;
+    info!(
+        "FEN {} | Target time {:?} | Strat: {:?}",
+        board.to_fen(),
+        target_move_time,
+        time_management_strat
+    );
+
+    if !cache.left_opening_book
+        && let Some(opening_book) = opening_book
+    {
+        if let Some(mv) = opening_book.get_weighted(board.hash()) {
+            info!("Playing book move {:?}", mv);
+            return (Some(mv), Score::ZERO);
+        } else {
+            cache.left_opening_book = true;
+        }
+    }
+
     search_minimax(
         board,
         cache,
         stop_fn,
-        min(Duration::from_secs(20), time_remaining / 10),
-        TimeManagementStrat::TargetLimit,
+        target_move_time,
+        time_management_strat,
     )
 }
