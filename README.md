@@ -2,6 +2,8 @@
 
 Beans Gambit
 
+Stockfish Elo: 1550
+
 ## Version Notes
 
 - Added opening book support. Currently using `gm2001.bin`.
