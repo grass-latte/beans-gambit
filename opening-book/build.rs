@@ -209,7 +209,8 @@ pub fn explore(start: &Chess, book: &HashMap<u64, Vec<BookMove>>, book_file: &mu
             // TODO: Remove after board is made tolerant of castling by moving king to edge
             // Castling represented as moving to corner for some reason
             if pos_board.pieces().get(from).unwrap().kind() == PieceKind::King
-                && let delta = (to.file().as_u8() as i8) - (from.file().as_u8() as i8) && delta.abs() > 2
+                && let delta = (to.file().as_u8() as i8) - (from.file().as_u8() as i8)
+                && delta.abs() > 2
             {
                 // -4 * 2 = -8
                 // -8 / 4 = -2
