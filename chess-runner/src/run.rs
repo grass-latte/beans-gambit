@@ -1,5 +1,6 @@
 use crate::setup::{BotVsBotOptions, ChessBot, ChessOptions, MatchType, PerformanceOptions};
 use crate::stockfish_ladder::stockfish_ladder;
+use crate::util::add_exe_on_windows;
 use color_print::{cformat, cprintln};
 use itertools::Itertools;
 use std::io::{BufRead, BufReader, Write};
@@ -30,7 +31,7 @@ fn bot_vs_bot(bot1: ChessBot, bot2: ChessBot, options: &BotVsBotOptions) {
         .arg("-games")
         .arg(options.games.to_string())
         .arg("-pgnout")
-        .arg("game.pgn");
+        .arg("file=game.pgn");
 
     cprintln!(
         "<c>Args: {}</>",
@@ -41,17 +42,41 @@ fn bot_vs_bot(bot1: ChessBot, bot2: ChessBot, options: &BotVsBotOptions) {
             .join(" ")
     );
 
-    let Ok(status) = command.status() else {
-        panic!("{}", cformat!("<r,bold>Failed to run fastchess</>"));
-    };
+    #[cfg(not(test))]
+    {
+        let Ok(status) = command.status() else {
+            panic!("{}", cformat!("<r,bold>Failed to run fastchess</>"));
+        };
+        if status.success() {
+            cprintln!("<g,bold>Match finished successfully!</>");
+        } else {
+            panic!(
+                "{}",
+                cformat!("<r,bold>fastchess exited with code: {:?}</>", status.code())
+            );
+        }
+    }
+    #[cfg(test)]
+    {
+        let Ok(output) = command.output() else {
+            panic!("{}", cformat!("<r,bold>Failed to run fastchess</>"));
+        };
 
-    if status.success() {
-        cprintln!("<g,bold>Match finished successfully!</>");
-    } else {
-        panic!(
-            "{}",
-            cformat!("<r,bold>fastchess exited with code: {:?}</>", status.code())
-        );
+        if output.status.success() {
+            cprintln!(
+                "{}\n<g,bold>Match finished successfully!</>",
+                String::from_utf8_lossy(&output.stdout)
+            );
+        } else {
+            panic!(
+                "{}\n{}",
+                String::from_utf8_lossy(&output.stdout),
+                cformat!(
+                    "<r,bold>fastchess exited with code: {:?}</>",
+                    output.status.code()
+                )
+            );
+        }
     }
 }
 
@@ -176,10 +201,7 @@ fn performance(bot: ChessBot, options: &PerformanceOptions) {
 }
 
 fn cutechess() {
-    #[cfg(unix)]
-    let mut command = Command::new("cutechess");
-    #[cfg(windows)]
-    let mut command = Command::new("cutechess.exe");
+    let mut command = Command::new(add_exe_on_windows("cutechess"));
 
     match command.status() {
         Ok(s) if s.success() => {}
