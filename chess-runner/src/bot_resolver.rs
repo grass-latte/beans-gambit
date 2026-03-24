@@ -1,4 +1,5 @@
 use crate::setup::{ChessBot, LocalBot};
+use crate::util::add_exe_on_windows;
 use color_print::{cformat, cprint, cprintln};
 use either::Either;
 use std::collections::HashSet;
@@ -126,7 +127,11 @@ fn compile_directory(directory: PathBuf) -> PathBuf {
 }
 
 pub fn get_stockfish() -> ChessBot {
-    let Ok(path) = which::which("stockfish") else {
+    let path = if fs::exists(add_exe_on_windows("extra-bots/stockfish")).is_ok_and(|b| b) {
+        add_exe_on_windows("extra-bots/stockfish")
+    } else if let Ok(path) = which::which(add_exe_on_windows("stockfish")) {
+        path.display().to_string()
+    } else {
         panic!(
             "{}",
             cformat!("<r,bold>Could not find stockfish executable.</>")
@@ -135,7 +140,7 @@ pub fn get_stockfish() -> ChessBot {
 
     ChessBot {
         name: "Stockfish".to_string(),
-        path: path.display().to_string(),
+        path,
     }
 }
 
@@ -150,7 +155,7 @@ pub fn resolve_local_bot(local_bot: LocalBot) -> ChessBot {
         },
         LocalBot::ChessCodingAdventure => ChessBot {
             name: "Chess-Coding-Adventure".to_string(),
-            path: PathBuf::from_str("./extra-bots/Chess-Coding-Adventure")
+            path: PathBuf::from_str(&add_exe_on_windows("extra-bots/Chess-Coding-Adventure"))
                 .unwrap()
                 .display()
                 .to_string(),

@@ -1,3 +1,4 @@
+use crate::util::add_exe_on_windows;
 use chess_lib::board::Board;
 use color_print::cprintln;
 use derive_getters::Getters;
@@ -143,7 +144,7 @@ impl SimpleMatchType {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ChessBot {
     pub name: String,
     pub path: String,
@@ -204,13 +205,15 @@ impl LocalBot {
     pub fn get_available() -> Vec<String> {
         let mut options = vec![LocalBot::BeansGambitLocal.to_string()];
 
-        if which::which("stockfish").is_ok() {
+        if fs::exists(add_exe_on_windows("extra-bots/stockfish")).is_ok_and(|b| b)
+            || which::which(add_exe_on_windows("stockfish")).is_ok()
+        {
             options.push(LocalBot::Stockfish.to_string());
         } else {
             cprintln!("<yellow,bold>Stockfish not found</>");
         }
 
-        if fs::exists("extra-bots/Chess-Coding-Adventure").is_ok_and(|b| b) {
+        if fs::exists(add_exe_on_windows("extra-bots/Chess-Coding-Adventure")).is_ok_and(|b| b) {
             options.push(LocalBot::ChessCodingAdventure.to_string());
         } else {
             cprintln!("<yellow,bold>Chess-Coding-Adventure bot not found</>");
