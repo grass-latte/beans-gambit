@@ -1,5 +1,6 @@
 use crate::eval::eval;
 use crate::minimax::TimeManagementStrat::StrictLimit;
+use crate::move_ordering::order_moves;
 use crate::results::{Score, SearchResult};
 use crate::tt::{TTEntry, TTEntryType};
 use crate::{InterMoveCache, results};
@@ -27,7 +28,7 @@ enum MoveType {
 }
 
 fn minimax<F>(
-    toplevel: bool,
+    toplevel: Option<Move>,
     board: &mut Board,
     cache: &mut InterMoveCache,
     depth_remaining: u8,
@@ -61,7 +62,7 @@ where
 }
 
 fn minimax_inner<F>(
-    toplevel: bool,
+    toplevel: Option<Move>,
     board: &mut Board,
     cache: &mut InterMoveCache,
     depth_remaining: u8,
@@ -90,7 +91,7 @@ where
 
     // Force search if toplevel - probably not worth storing moves with evals to speed up
     // move selection in previously seen position
-    if !toplevel
+    if toplevel.is_none()
         && let Some(hd) = cache.transposition_table.get(&board.hash())
         && hd.depth_searched >= depth_remaining
     // Otherwise will be replaced by deeper search
@@ -114,9 +115,17 @@ where
         }
     }
 
-    // TODO: Consider randomising move order
     let mut options = MoveList::new();
     let is_check = compute_legal_moves(&mut options, board);
+
+    if let Some(last_iter_best) = toplevel {
+        // Move last best to front
+        let best_pos = options.iter().position(|mv| *mv == last_iter_best).unwrap();
+        options.swap(0, best_pos);
+        order_moves(&mut options[1..], board);
+    } else {
+        order_moves(&mut options, board);
+    }
 
     if options.is_empty() {
         let score = if is_check {
@@ -161,7 +170,7 @@ where
         let um = board.make_move(mv);
 
         // Minimax returns opponent's score
-        let (sr, mt) = minimax(false, board, cache, depth_remaining - 1, best_eval, stop_fn);
+        let (sr, mt) = minimax(None, board, cache, depth_remaining - 1, best_eval, stop_fn);
         board.unmake_last_move(um);
 
         if mt == MoveType::Interrupted {
@@ -257,6 +266,7 @@ pub fn search_minimax(
 
     let mut options = MoveList::new();
     compute_legal_moves(&mut options, board);
+    order_moves(&mut options, board); // Make first iterative best pass-down correct
     let mut best_move = Some(options[0]); // If we fail first search
     let um = board.make_move(options[0]);
     let mut eval_after_move = eval(board);
@@ -270,7 +280,7 @@ pub fn search_minimax(
         let start = Instant::now();
 
         let (sr, best_move_at_sd) = minimax(
-            true,
+            best_move,
             board,
             cache,
             search_depth,

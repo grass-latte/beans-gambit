@@ -11,8 +11,8 @@ use std::fs;
 use std::process::Command;
 use std::str::FromStr;
 use std::sync::LazyLock;
-use strum::{EnumCount, IntoEnumIterator};
-use strum_macros::{Display, EnumCount, EnumIter, EnumString};
+use strum::IntoEnumIterator;
+use strum_macros::{Display, EnumIter, EnumString};
 
 pub struct BotVsBotOptions {
     pub games: usize,
@@ -191,7 +191,7 @@ fn get_remote_versions() -> Vec<String> {
 
 static AVAILABLE_VERSIONS: LazyLock<Vec<String>> = LazyLock::new(get_remote_versions);
 
-#[derive(Debug, Serialize, Deserialize, EnumString, EnumIter, Display, EnumCount, Hash)]
+#[derive(Debug, Serialize, Deserialize, EnumString, EnumIter, Display, Hash)]
 pub enum LocalBot {
     #[strum(serialize = "Beans Gambit [local]")]
     BeansGambitLocal,
@@ -225,6 +225,7 @@ impl LocalBot {
 
 fn select_bot(index: usize) -> Either<LocalBot, String> {
     let mut versions = LocalBot::get_available();
+    let local_version_count = versions.len();
 
     let available_remote_versions: &Vec<String> = AVAILABLE_VERSIONS.as_ref();
 
@@ -241,10 +242,10 @@ fn select_bot(index: usize) -> Either<LocalBot, String> {
         .interact()
         .unwrap();
 
-    if selection < LocalBot::COUNT {
+    if selection < local_version_count {
         Either::Left(LocalBot::from_str(&versions[selection]).unwrap())
     } else {
-        let selection = selection - LocalBot::COUNT;
+        let selection = selection - local_version_count;
         Either::Right(AVAILABLE_VERSIONS[selection].clone())
     }
 }

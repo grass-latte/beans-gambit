@@ -4,6 +4,7 @@
 mod constant_heuristics;
 pub(crate) mod eval;
 mod minimax;
+pub(crate) mod move_ordering;
 pub mod results;
 mod tt;
 
