@@ -139,48 +139,18 @@ where
     }
 
     let mut best_move = options[0];
-    let um = board.make_move(options[0]);
-    // Minimax returns opponent's score
-    let (sr, mt) = minimax(
-        false,
-        board,
-        cache,
-        depth_remaining - 1,
-        Score::NEG_INF,
-        stop_fn,
-    );
-    board.unmake_last_move(um);
-    if mt == MoveType::Interrupted {
-        return (-sr, mt);
-    }
+    let mut best_eval = Score::NEG_INF;
+    let mut poisoned = false;
     #[cfg(debug_assertions)]
-    let SearchResult {
-        score: eval,
-        mut poisoned,
-        backtrace: mut best_backtrace,
-        fen: mut best_fen,
-    } = -sr;
-    #[cfg(not(debug_assertions))]
-    let SearchResult {
-        score: eval,
-        mut poisoned,
-    } = -sr;
-    let mut best_eval = eval.increment_mate_in();
+    let (mut best_backtrace, mut best_fen) = {
+        let mut best_backtrace = Backtrace::capture();
+        let um = board.make_move(best_move);
+        let mut best_fen = board.to_fen();
+        board.unmake_last_move(um);
+        (best_backtrace, best_fen)
+    };
 
-    if best_eval > -prune {
-        // Branch will be pruned
-        cache.transposition_table.push(
-            board.hash(),
-            TTEntry {
-                depth_searched: depth_remaining, // Remaining depth is what was searched to obtain eval
-                white_score: board.color_to_move().apply_color_to_score(best_eval),
-                entry_type: TTEntryType::color_bound(board.color_to_move()),
-            },
-        );
-        return (SearchResult::new(best_eval, poisoned), MoveType::Pruned);
-    }
-
-    for mv in options.into_iter().skip(1) {
+    for mv in options {
         if stop_fn() {
             return (
                 SearchResult::new(best_eval, poisoned),
